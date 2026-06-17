@@ -1,60 +1,10 @@
 <?php
-// Allow cross-origin requests (CORS)
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: POST");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-// Include database and user model
-include_once '../config/database.php';
-include_once '../models/User.php';
+require_once __DIR__ . '/../controllers/AuthController.php';
 
-// Get database connection and create user object
-$database = new Database();
-$db = $database->getConnection();
-$user = new User($db);
-
-// Get posted data
-$data = json_decode(file_get_contents("php://input"));
-
-// Make sure data is not empty
-if(!empty($data->full_name) && !empty($data->email) && !empty($data->password) && !empty($data->student_staff_id) && !empty($data->phone_number)) {
-
-    // Set user property values
-    $user->full_name = $data->full_name;
-    $user->email = $data->email;
-    $user->password = $data->password;
-    $user->student_staff_id = $data->student_staff_id;
-    $user->phone_number = $data->phone_number;
-    $user->role = 'student'; // Default role for new registrations
-
-    // Create the user
-    if($user->register()) {
-
-        // Set response code - 201 created
-        http_response_code(201);
-
-        // Tell the user
-        echo json_encode(array("message" => "User was successfully registered."));
-    }
-
-    // If unable to create the user, tell the user
-    else {
-        // Set response code - 503 service unavailable
-        http_response_code(503);
-
-        // Tell the user
-        echo json_encode(array("message" => "Unable to register user."));
-    }
-}
-
-// Tell the user data is incomplete
-else {
-    // Set response code - 400 bad request
-    http_response_code(400);
-
-    // Tell the user
-    echo json_encode(array("message" => "Unable to register user. Data is incomplete."));
-}
+$auth = new AuthController();
+$auth->register();
 ?>
