@@ -1,0 +1,23 @@
+### 1. Test Registration
+POST http://localhost:8000/api/register.php
+Content-Type: application/json
+
+{
+    "full_name": "Test Student",
+    "email": "test@strathmore.edu",
+    "password": "password123",
+    "student_staff_id": "123456",
+    "phone_number": "0712345678"
+}
+
+### 2. Test Login
+POST http://localhost:8000/api/login.php
+Content-Type: application/json
+
+{
+    "email": "test@strathmore.edu",
+    "password": "password123"
+}
+
+### 3. Test Getting All Items (Search/Dashboard)
+GET http://localhost:8000/api/items.php

@@ -1,5 +1,24 @@
-/vendor/
-/node_modules/
-/.env
-/uploads/*
-!.gitkeep
+# Environment files
+.env
+.env.local
+
+# Uploaded files
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Dependencies
+vendor/
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

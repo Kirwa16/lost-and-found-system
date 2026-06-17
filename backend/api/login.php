@@ -19,33 +19,34 @@ $user = new User($db);
 $data = json_decode(file_get_contents("php://input"));
 
 // Make sure data is not empty
-if(!empty($data->full_name) && !empty($data->email) && !empty($data->password) && !empty($data->student_staff_id) && !empty($data->phone_number)) {
+if(!empty($data->email) && !empty($data->password)) {
 
     // Set user property values
-    $user->full_name = $data->full_name;
     $user->email = $data->email;
     $user->password = $data->password;
-    $user->student_staff_id = $data->student_staff_id;
-    $user->phone_number = $data->phone_number;
-    $user->role = 'student'; // Default role for new registrations
 
-    // Create the user
-    if($user->register()) {
+    // Login the user
+    if($user->login()) {
 
-        // Set response code - 201 created
-        http_response_code(201);
+        // Set response code - 200 ok
+        http_response_code(200);
 
         // Tell the user
-        echo json_encode(array("message" => "User was successfully registered."));
+        echo json_encode(array(
+            "message" => "Login successful.",
+            "user_id" => $user->user_id,
+            "full_name" => $user->full_name,
+            "role" => $user->role
+        ));
     }
 
-    // If unable to create the user, tell the user
+    // If unable to login, tell the user
     else {
-        // Set response code - 503 service unavailable
-        http_response_code(503);
+        // Set response code - 401 unauthorized
+        http_response_code(401);
 
         // Tell the user
-        echo json_encode(array("message" => "Unable to register user."));
+        echo json_encode(array("message" => "Login failed. Invalid email or password."));
     }
 }
 
@@ -55,6 +56,6 @@ else {
     http_response_code(400);
 
     // Tell the user
-    echo json_encode(array("message" => "Unable to register user. Data is incomplete."));
+    echo json_encode(array("message" => "Unable to login. Data is incomplete."));
 }
 ?>
