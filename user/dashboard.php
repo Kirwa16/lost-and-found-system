@@ -2,6 +2,23 @@
 <?php
 
 require_once '../includes/auth.php';
+require_once '../backend/models/Dashboard.php';
+
+if($_SESSION['role'] !== 'user')
+{
+    header("Location: /admin/dashboard.php");
+    exit;
+}
+
+$dashboard = new Dashboard();
+
+$userId = $_SESSION['user_id'];
+
+$totalLost      = $dashboard->countLostItems($userId);
+$totalFound     = $dashboard->countFoundItems($userId);
+$totalClaims    = $dashboard->countClaims($userId);
+$totalRecovered = $dashboard->countRecovered($userId);
+
 include '../includes/header.php';
 
 ?>
@@ -16,38 +33,38 @@ include '../includes/header.php';
 
         <h1>
             Welcome,
-            <?php echo htmlspecialchars($_SESSION['fullname']); ?>
+            <?= htmlspecialchars($_SESSION['fullname']); ?>
         </h1>
 
         <p>
-            Manage lost and found reports from your dashboard.
+            Manage your lost and found reports.
         </p>
 
         <div class="cards">
 
             <div class="card">
                 <h3>Lost Reports</h3>
-                <p>0</p>
+                <p><?= $totalLost ?></p>
             </div>
 
             <div class="card">
                 <h3>Found Reports</h3>
-                <p>0</p>
+                <p><?= $totalFound ?></p>
             </div>
 
             <div class="card">
                 <h3>Claims</h3>
-                <p>0</p>
+                <p><?= $totalClaims ?></p>
             </div>
 
             <div class="card">
                 <h3>Recovered</h3>
-                <p>0</p>
+                <p><?= $totalRecovered ?></p>
             </div>
 
         </div>
 
-        <div class="quick-actions">
+        <div class="card">
 
             <h2>Quick Actions</h2>
 
@@ -70,7 +87,7 @@ include '../includes/header.php';
 
                 <a href="/user/claims.php"
                    class="action-btn">
-                    View Claims
+                    My Claims
                 </a>
 
             </div>
