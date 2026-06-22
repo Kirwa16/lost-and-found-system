@@ -1,82 +1,219 @@
 <?php
-class Claim {
-    // Database connection and table name
+
+require_once __DIR__ . '/../config/database.php';
+
+class Claim
+{
     private $conn;
-    private $table_name = "claims";
 
-    // Object properties
-    public $claim_id;
-    public $item_id;
-    public $claimant_id;
-    public $proof_of_ownership;
-    public $status;
-    public $date_reviewed;
-    public $admin_notes;
-
-    // Constructor with $db as database connection
-    public function __construct($db) {
-        $this->conn = $db;
+    public function __construct()
+    {
+        $database = new Database();
+        $this->conn = $database->connect();
     }
 
-    // Submit a new claim
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . "
-                SET
-                    item_id = :item_id,
-                    claimant_id = :claimant_id,
-                    proof_of_ownership = :proof_of_ownership,
-                    status = :status";
+    /*
+    |--------------------------------------------------------------------------
+    | Create Claim
+    |--------------------------------------------------------------------------
+    */
 
-        $stmt = $this->conn->prepare($query);
+    public function createClaim(
+        $userId,
+        $matchId,
+        $claimMessage
+    )
+    {
+        $stmt = $this->conn->prepare(
+            "INSERT INTO claims
+            (
+                user_id,
+                match_id,
+                claim_message
+            )
+            VALUES
+            (
+                :user_id,
+                :match_id,
+                :claim_message
+            )"
+        );
 
-        // Default status is pending
-        $this->status = 'pending';
-
-        // Bind values
-        $stmt->bindParam(":item_id", $this->item_id);
-        $stmt->bindParam(":claimant_id", $this->claimant_id);
-        $stmt->bindParam(":proof_of_ownership", $this->proof_of_ownership);
-        $stmt->bindParam(":status", $this->status);
-
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute([
+            ':user_id'       => $userId,
+            ':match_id'      => $matchId,
+            ':claim_message' => $claimMessage
+        ]);
     }
 
-    // Read pending claims (For Admin Dashboard)
-    public function readPending() {
-        $query = "SELECT c.*, i.item_name, u.full_name as claimant_name 
-                  FROM " . $this->table_name . " c
-                  LEFT JOIN items i ON c.item_id = i.item_id
-                  LEFT JOIN users u ON c.claimant_id = u.user_id
-                  WHERE c.status = 'pending'
-                  ORDER BY c.date_submitted DESC";
+    /*
+    |--------------------------------------------------------------------------
+    | Get All Claims
+    |--------------------------------------------------------------------------
+    */
 
-        $stmt = $this->conn->prepare($query);
+    public function getAllClaims()
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT
+                c.*,
+                u.fullname,
+                m.confidence_score,
+
+                l.item_name AS lost_item,
+                f.item_name AS found_item
+
+             FROM claims c
+
+             INNER JOIN users u
+                ON c.user_id = u.id
+
+             INNER JOIN matches m
+                ON c.match_id = m.id
+
+             INNER JOIN lost_items l
+                ON m.lost_item_id = l.id
+
+             INNER JOIN found_items f
+                ON m.found_item_id = f.id
+
+             ORDER BY c.created_at DESC"
+        );
+
         $stmt->execute();
 
-        return $stmt;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Update claim status (Approve/Reject by Admin)
-    public function updateStatus() {
-        $query = "UPDATE " . $this->table_name . "
-                  SET status = :status,
-                      date_reviewed = NOW(),
-                      admin_notes = :admin_notes
-                  WHERE claim_id = :claim_id";
+    /*
+    |--------------------------------------------------------------------------
+    | Get Claims By User
+    |--------------------------------------------------------------------------
+    */
 
-        $stmt = $this->conn->prepare($query);
+    public function getClaimsByUser($userId)
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT
+                c.*,
+                m.confidence_score
+             FROM claims c
 
-        $stmt->bindParam(":status", $this->status);
-        $stmt->bindParam(":admin_notes", $this->admin_notes);
-        $stmt->bindParam(":claim_id", $this->claim_id);
+             INNER JOIN matches m
+                ON c.match_id = m.id
 
-        if ($stmt->execute()) {
-            return true;
-        }
-        return false;
+             WHERE c.user_id = :user_id
+
+             ORDER BY c.created_at DESC"
+        );
+
+        $stmt->execute([
+            ':user_id' => $userId
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Get Single Claim
+    |--------------------------------------------------------------------------
+    */
+
+    public function getClaimById($id)
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT *
+             FROM claims
+             WHERE id = :id"
+        );
+
+        $stmt->execute([
+            ':id' => $id
+        ]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Update Claim Status
+    |--------------------------------------------------------------------------
+    */
+
+    public function updateStatus(
+        $claimId,
+        $status
+    )
+    {
+        $stmt = $this->conn->prepare(
+            "UPDATE claims
+             SET status = :status
+             WHERE id = :id"
+        );
+
+        return $stmt->execute([
+            ':status' => $status,
+            ':id'     => $claimId
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Approve Claim
+    |--------------------------------------------------------------------------
+    */
+
+    public function approveClaim($claimId)
+    {
+        return $this->updateStatus(
+            $claimId,
+            'approved'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reject Claim
+    |--------------------------------------------------------------------------
+    */
+
+    public function rejectClaim($claimId)
+    {
+        return $this->updateStatus(
+            $claimId,
+            'rejected'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Create Notification
+    |--------------------------------------------------------------------------
+    */
+
+    public function createNotification(
+        $userId,
+        $message
+    )
+    {
+        $stmt = $this->conn->prepare(
+            "INSERT INTO notifications
+            (
+                user_id,
+                message
+            )
+            VALUES
+            (
+                :user_id,
+                :message
+            )"
+        );
+
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':message' => $message
+        ]);
     }
 }
-?>
+

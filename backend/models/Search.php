@@ -1,4 +1,4 @@
-<?php
+search<?php
 
 require_once __DIR__ . '/../config/database.php';
 
@@ -14,21 +14,31 @@ class Search
 
     /*
     |--------------------------------------------------------------------------
-    | Search Lost Items
+    | Search Lost + Found Items
     |--------------------------------------------------------------------------
     */
 
     public function searchItems($keyword = '', $category = '')
     {
         $sql = "
-            SELECT *
+            SELECT
+                id,
+                item_name,
+                category,
+                description,
+                location_lost AS location,
+                date_lost AS item_date,
+                image,
+                status,
+                created_at,
+                'Lost Item' AS item_type
             FROM lost_items
             WHERE 1=1
         ";
 
         $params = [];
 
-        if (!empty($keyword))
+        if(!empty($keyword))
         {
             $sql .= "
                 AND (
@@ -42,13 +52,55 @@ class Search
             $params[':keyword'] = '%' . $keyword . '%';
         }
 
-        if (!empty($category))
+        if(!empty($category))
         {
             $sql .= "
                 AND category = :category
             ";
 
             $params[':category'] = $category;
+        }
+
+        $sql .= "
+
+            UNION ALL
+
+            SELECT
+                id,
+                item_name,
+                category,
+                description,
+                location_found AS location,
+                date_found AS item_date,
+                image,
+                status,
+                created_at,
+                'Found Item' AS item_type
+            FROM found_items
+            WHERE 1=1
+        ";
+
+        if(!empty($keyword))
+        {
+            $sql .= "
+                AND (
+                    item_name LIKE :keyword2
+                    OR category LIKE :keyword2
+                    OR description LIKE :keyword2
+                    OR location_found LIKE :keyword2
+                )
+            ";
+
+            $params[':keyword2'] = '%' . $keyword . '%';
+        }
+
+        if(!empty($category))
+        {
+            $sql .= "
+                AND category = :category2
+            ";
+
+            $params[':category2'] = $category;
         }
 
         $sql .= "
@@ -63,7 +115,7 @@ class Search
 
     /*
     |--------------------------------------------------------------------------
-    | Get Single Item
+    | Get Item By ID
     |--------------------------------------------------------------------------
     */
 

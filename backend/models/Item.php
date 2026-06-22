@@ -16,6 +16,9 @@ class Item
         $userId,
         $itemName,
         $category,
+        $color,
+        $brandModel,
+        $uniqueFeatures,
         $description,
         $locationLost,
         $dateLost,
@@ -28,6 +31,9 @@ class Item
                 user_id,
                 item_name,
                 category,
+                color,
+                brand_model,
+                unique_features,
                 description,
                 location_lost,
                 date_lost,
@@ -38,6 +44,9 @@ class Item
                 :user_id,
                 :item_name,
                 :category,
+                :color,
+                :brand_model,
+                :unique_features,
                 :description,
                 :location_lost,
                 :date_lost,
@@ -49,6 +58,9 @@ class Item
             ':user_id' => $userId,
             ':item_name' => $itemName,
             ':category' => $category,
+            ':color' => $color,
+            ':brand_model' => $brandModel,
+            ':unique_features' => $uniqueFeatures,
             ':description' => $description,
             ':location_lost' => $locationLost,
             ':date_lost' => $dateLost,
@@ -60,6 +72,9 @@ class Item
         $userId,
         $itemName,
         $category,
+        $color,
+        $brandModel,
+        $uniqueFeatures,
         $description,
         $locationFound,
         $dateFound,
@@ -72,6 +87,9 @@ class Item
                 user_id,
                 item_name,
                 category,
+                color,
+                brand_model,
+                unique_features,
                 description,
                 location_found,
                 date_found,
@@ -82,6 +100,9 @@ class Item
                 :user_id,
                 :item_name,
                 :category,
+                :color,
+                :brand_model,
+                :unique_features,
                 :description,
                 :location_found,
                 :date_found,
@@ -93,33 +114,13 @@ class Item
             ':user_id' => $userId,
             ':item_name' => $itemName,
             ':category' => $category,
+            ':color' => $color,
+            ':brand_model' => $brandModel,
+            ':unique_features' => $uniqueFeatures,
             ':description' => $description,
             ':location_found' => $locationFound,
             ':date_found' => $dateFound,
             ':image' => $image
         ]);
     }
-
-    public function getLostItems()
-    {
-        $stmt = $this->conn->query(
-            "SELECT *
-             FROM lost_items
-             ORDER BY created_at DESC"
-        );
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public function getFoundItems()
-    {
-        $stmt = $this->conn->query(
-            "SELECT *
-             FROM found_items
-             ORDER BY created_at DESC"
-        );
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
 }
-

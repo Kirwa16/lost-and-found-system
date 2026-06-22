@@ -1,11 +1,12 @@
 <?php
 session_start();
-include '../includes/header.php';
+include '../frontend/components/header.php';
 ?>
 
 <div class="auth-wrapper">
 
     <div class="auth-left">
+        
 
         <h1>Lost & Found</h1>
 
@@ -40,6 +41,7 @@ include '../includes/header.php';
                 unset($_SESSION['error']);
             }
             ?>
+            
 
             <form
             action="../public/process-login.php"
@@ -82,4 +84,4 @@ include '../includes/header.php';
 
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include '../components/footer.php'; ?>

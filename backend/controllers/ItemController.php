@@ -27,10 +27,12 @@ if(isset($_POST['submit_lost_item']))
         ? trim($_POST['custom_category'])
         : $_POST['category'];
 
+    $color = trim($_POST['color']);
+    $brandModel = trim($_POST['brand_model']);
+    $uniqueFeatures = trim($_POST['unique_features']);
+
     $description = trim($_POST['description']);
-
     $locationLost = trim($_POST['location_lost']);
-
     $dateLost = $_POST['date_lost'];
 
     $imageName = null;
@@ -44,14 +46,18 @@ if(isset($_POST['submit_lost_item']))
             time() . "_" .
             basename($_FILES['image']['name']);
 
-        $target =
+        $uploadDir =
             __DIR__ .
-            '/../uploads/lost-items/' .
-            $imageName;
+            '/../uploads/lost-items/';
+
+        if(!is_dir($uploadDir))
+        {
+            mkdir($uploadDir, 0777, true);
+        }
 
         move_uploaded_file(
             $_FILES['image']['tmp_name'],
-            $target
+            $uploadDir . $imageName
         );
     }
 
@@ -59,6 +65,9 @@ if(isset($_POST['submit_lost_item']))
         $userId,
         $itemName,
         $category,
+        $color,
+        $brandModel,
+        $uniqueFeatures,
         $description,
         $locationLost,
         $dateLost,
@@ -71,7 +80,7 @@ if(isset($_POST['submit_lost_item']))
     $_SESSION['success'] =
         "Lost item reported successfully.";
 
-    header("Location: /user/report-lost.php");
+    header("Location: /frontend/user/report-lost.php");
     exit;
 }
 
@@ -94,14 +103,13 @@ if(isset($_POST['submit_found_item']))
         ? trim($_POST['custom_category'])
         : $_POST['category'];
 
-    $description =
-        trim($_POST['description']);
+    $color = trim($_POST['color']);
+    $brandModel = trim($_POST['brand_model']);
+    $uniqueFeatures = trim($_POST['unique_features']);
 
-    $locationFound =
-        trim($_POST['location_found']);
-
-    $dateFound =
-        $_POST['date_found'];
+    $description = trim($_POST['description']);
+    $locationFound = trim($_POST['location_found']);
+    $dateFound = $_POST['date_found'];
 
     $imageName = null;
 
@@ -114,14 +122,18 @@ if(isset($_POST['submit_found_item']))
             time() . "_" .
             basename($_FILES['image']['name']);
 
-        $target =
+        $uploadDir =
             __DIR__ .
-            '/../uploads/lost-items/' .
-            $imageName;
+            '/../uploads/found-items/';
+
+        if(!is_dir($uploadDir))
+        {
+            mkdir($uploadDir, 0777, true);
+        }
 
         move_uploaded_file(
             $_FILES['image']['tmp_name'],
-            $target
+            $uploadDir . $imageName
         );
     }
 
@@ -129,6 +141,9 @@ if(isset($_POST['submit_found_item']))
         $userId,
         $itemName,
         $category,
+        $color,
+        $brandModel,
+        $uniqueFeatures,
         $description,
         $locationFound,
         $dateFound,
@@ -141,7 +156,6 @@ if(isset($_POST['submit_found_item']))
     $_SESSION['success'] =
         "Found item reported successfully.";
 
-    header("Location: /user/report-found.php");
+    header("Location: /frontend/user/report-found.php");
     exit;
 }
-
