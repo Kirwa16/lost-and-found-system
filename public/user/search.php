@@ -1,14 +1,15 @@
 <?php
 
+session_save_path(__DIR__ . '/../../sessions');
 session_start();
 
-if(!isset($_SESSION['user_id']))
+if (!isset($_SESSION['user_id']))
 {
     header("Location: /login.php");
     exit;
 }
 
-if($_SESSION['role'] !== 'user')
+if ($_SESSION['role'] !== 'user')
 {
     header("Location: /admin/dashboard.php");
     exit;
@@ -19,11 +20,10 @@ require_once __DIR__ . '/../../backend/models/Search.php';
 $searchModel = new Search();
 
 $results = [];
-
 $keyword = '';
 $category = '';
 
-if(isset($_GET['search']))
+if (isset($_GET['search']))
 {
     $keyword = trim($_GET['keyword'] ?? '');
     $category = trim($_GET['category'] ?? '');
@@ -63,6 +63,7 @@ if(isset($_GET['search']))
     <?php include __DIR__ . '/../components/user-sidebar.php'; ?>
 
     <div class="main">
+
         <?php include __DIR__ . '/../components/topbar.php'; ?>
 
         <div class="content">
@@ -91,37 +92,29 @@ if(isset($_GET['search']))
 
                         <select name="category">
 
-                            <option value="">
-                                All Categories
-                            </option>
+                            <option value="">All Categories</option>
 
-                            <option value="Electronics"
-                                <?= $category === 'Electronics' ? 'selected' : '' ?>>
+                            <option value="Electronics" <?= $category === 'Electronics' ? 'selected' : '' ?>>
                                 Electronics
                             </option>
 
-                            <option value="Documents"
-                                <?= $category === 'Documents' ? 'selected' : '' ?>>
+                            <option value="Documents" <?= $category === 'Documents' ? 'selected' : '' ?>>
                                 Documents
                             </option>
 
-                            <option value="Keys"
-                                <?= $category === 'Keys' ? 'selected' : '' ?>>
+                            <option value="Keys" <?= $category === 'Keys' ? 'selected' : '' ?>>
                                 Keys
                             </option>
 
-                            <option value="Clothing"
-                                <?= $category === 'Clothing' ? 'selected' : '' ?>>
+                            <option value="Clothing" <?= $category === 'Clothing' ? 'selected' : '' ?>>
                                 Clothing
                             </option>
 
-                            <option value="Bags"
-                                <?= $category === 'Bags' ? 'selected' : '' ?>>
+                            <option value="Bags" <?= $category === 'Bags' ? 'selected' : '' ?>>
                                 Bags
                             </option>
 
-                            <option value="Accessories"
-                                <?= $category === 'Accessories' ? 'selected' : '' ?>>
+                            <option value="Accessories" <?= $category === 'Accessories' ? 'selected' : '' ?>>
                                 Accessories
                             </option>
 
@@ -133,9 +126,7 @@ if(isset($_GET['search']))
                         type="submit"
                         name="search"
                         class="action-btn">
-
                         Search
-
                     </button>
 
                 </form>
@@ -159,7 +150,6 @@ if(isset($_GET['search']))
                             <thead>
 
                                 <tr>
-
                                     <th>#</th>
                                     <th>Type</th>
                                     <th>Item</th>
@@ -167,7 +157,6 @@ if(isset($_GET['search']))
                                     <th>Location</th>
                                     <th>Status</th>
                                     <th>Date</th>
-
                                 </tr>
 
                             </thead>
@@ -226,6 +215,12 @@ if(isset($_GET['search']))
 
                                             <span class="badge badge-warning">
                                                 Claimed
+                                            </span>
+
+                                        <?php elseif($item['status'] === 'available'): ?>
+
+                                            <span class="badge badge-success">
+                                                Available
                                             </span>
 
                                         <?php else: ?>

@@ -1,27 +1,16 @@
 <?php
-class Claim {
+
+require_once __DIR__ . '/../config/database.php';
+
+class Claim
+{
     private $conn;
 
-    // Object properties
-    public $claim_id;
-    public $item_id;
-    public $claimant_id;
-    public $proof_of_ownership;
-    public $status;
-    public $admin_notes;
-
-    public function __construct($db) {
-        $this->conn = $db;
+    public function __construct()
+    {
+        $database = new Database();
+        $this->conn = $database->connect();
     }
-
-    // Create claim
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . "
-                SET
-                    item_id = :item_id,
-                    claimant_id = :claimant_id,
-                    proof_of_ownership = :proof_of_ownership,
-                    status = :status";
 
     public function createClaim(
         $userId,
@@ -34,46 +23,24 @@ class Claim {
             (
                 user_id,
                 match_id,
-                claim_message
+                claim_message,
+                status
             )
             VALUES
             (
                 :user_id,
                 :match_id,
-                :claim_message
+                :claim_message,
+                'pending'
             )"
         );
 
-        $stmt->bindParam(":item_id", $this->item_id);
-        $stmt->bindParam(":claimant_id", $this->claimant_id);
-        $stmt->bindParam(":proof_of_ownership", $this->proof_of_ownership);
-        $this->status = 'pending';
-        $stmt->bindParam(":status", $this->status);
-
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':match_id' => $matchId,
+            ':claim_message' => $claimMessage
+        ]);
     }
-
-    // Read pending claims for Admin
-    public function readPending() {
-        $query = "SELECT c.claim_id, i.item_name, u.full_name as claimant_name, c.proof_of_ownership, c.date_submitted 
-                  FROM " . $this->table_name . " c
-                  JOIN items i ON c.item_id = i.item_id
-                  JOIN users u ON c.claimant_id = u.user_id
-                  WHERE c.status = 'pending'
-                  ORDER BY c.date_submitted DESC";
-
-        $stmt->execute();
-        return $stmt;
-    }
-
-    // Update claim status (Approve/Reject)
-    public function updateStatus() {
-        $query = "UPDATE " . $this->table_name . "
-                SET status = :status, admin_notes = :admin_notes
-                WHERE claim_id = :claim_id";
 
     public function getClaimsByUser($userId)
     {
@@ -83,13 +50,67 @@ class Claim {
                 m.confidence_score
              FROM claims c
 
-             INNER JOIN matches m
+             LEFT JOIN matches m
                 ON c.match_id = m.id
 
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+             WHERE c.user_id = :user_id
+
+             ORDER BY c.created_at DESC"
+        );
+
+        $stmt->execute([
+            ':user_id' => $userId
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getAllClaims()
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT
+                c.*,
+                u.fullname
+             FROM claims c
+
+             INNER JOIN users u
+                ON c.user_id = u.id
+
+             ORDER BY c.created_at DESC"
+        );
+
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStatus($claimId, $status)
+    {
+        $stmt = $this->conn->prepare(
+            "UPDATE claims
+             SET status = :status
+             WHERE id = :id"
+        );
+
+        return $stmt->execute([
+            ':status' => $status,
+            ':id' => $claimId
+        ]);
+    }
+
+    public function getClaimById($claimId)
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT *
+             FROM claims
+             WHERE id = :id
+             LIMIT 1"
+        );
+
+        $stmt->execute([
+            ':id' => $claimId
+        ]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }
-

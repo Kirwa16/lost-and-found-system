@@ -1,23 +1,23 @@
 <?php
 
+session_save_path(__DIR__ . '/../../sessions');
 session_start();
 
-if(!isset($_SESSION['user_id']))
+if (!isset($_SESSION['user_id']))
 {
     header("Location: /login.php");
     exit;
 }
 
-if($_SESSION['role'] !== 'admin')
+if ($_SESSION['role'] !== 'admin')
 {
     header("Location: /user/dashboard.php");
     exit;
 }
 
-require_once '../../backend/models/Claim.php';
+require_once __DIR__ . '/../../backend/models/Claim.php';
 
 $claimModel = new Claim();
-
 $claims = $claimModel->getAllClaims();
 
 ?>
@@ -26,20 +26,13 @@ $claims = $claimModel->getAllClaims();
 <html lang="en">
 
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Manage Claims</title>
 
-<link rel="stylesheet"
-      href="/assets/css/dashboard.css">
-
-<link rel="stylesheet"
-      href="/assets/css/admin.css">
-
+<link rel="stylesheet" href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
 </head>
 
 <body>
@@ -67,30 +60,23 @@ $claims = $claimModel->getAllClaims();
                 <table class="table">
 
                     <thead>
-
                         <tr>
-
-                            <th>#</th>
+                            <th>ID</th>
                             <th>User</th>
-                            <th>Claim Message</th>
+                            <th>Message</th>
                             <th>Status</th>
-                            <th>Actions</th>
-
+                            <th>Date</th>
+                            <th>Action</th>
                         </tr>
-
                     </thead>
 
                     <tbody>
-
-                    <?php $count = 1; ?>
 
                     <?php foreach($claims as $claim): ?>
 
                         <tr>
 
-                            <td>
-                                <?= $count++ ?>
-                            </td>
+                            <td><?= $claim['id'] ?></td>
 
                             <td>
                                 <?= htmlspecialchars($claim['fullname']) ?>
@@ -101,27 +87,11 @@ $claims = $claimModel->getAllClaims();
                             </td>
 
                             <td>
+                                <?= ucfirst($claim['status']) ?>
+                            </td>
 
-                                <?php if($claim['status'] === 'approved'): ?>
-
-                                    <span class="badge badge-success">
-                                        Approved
-                                    </span>
-
-                                <?php elseif($claim['status'] === 'rejected'): ?>
-
-                                    <span class="badge badge-danger">
-                                        Rejected
-                                    </span>
-
-                                <?php else: ?>
-
-                                    <span class="badge badge-warning">
-                                        Pending
-                                    </span>
-
-                                <?php endif; ?>
-
+                            <td>
+                                <?= date('d M Y', strtotime($claim['created_at'])) ?>
                             </td>
 
                             <td>
@@ -130,27 +100,19 @@ $claims = $claimModel->getAllClaims();
 
                                     <a
                                         href="process-claim.php?id=<?= $claim['id'] ?>&action=approve"
-                                        class="action-btn"
-                                        onclick="return confirm('Approve this claim?')">
-
+                                        class="action-btn">
                                         Approve
-
                                     </a>
 
                                     <a
                                         href="process-claim.php?id=<?= $claim['id'] ?>&action=reject"
-                                        class="action-btn"
-                                        onclick="return confirm('Reject this claim?')">
-
+                                        class="action-btn">
                                         Reject
-
                                     </a>
 
                                 <?php else: ?>
 
-                                    <span style="color:#64748b;">
-                                        Completed
-                                    </span>
+                                    Completed
 
                                 <?php endif; ?>
 
@@ -175,5 +137,4 @@ $claims = $claimModel->getAllClaims();
 </div>
 
 </body>
-
 </html>

@@ -3,8 +3,11 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+session_save_path(__DIR__ . '/../../sessions');
+
 session_start();
 
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 
 class AuthController
@@ -13,7 +16,10 @@ class AuthController
 
     public function __construct()
     {
-        $this->user = new User();
+        $database = new Database();
+        $db = $database->connect();
+
+        $this->user = new User($db);
     }
 
     public function register()
@@ -49,11 +55,19 @@ class AuthController
                 PASSWORD_DEFAULT
             );
 
-            $this->user->register(
-                $fullname,
-                $email,
-                $hashedPassword
-            );
+            if (
+                !$this->user->register(
+                    $fullname,
+                    $email,
+                    $hashedPassword
+                )
+            ) {
+                $_SESSION['error'] =
+                    "Failed to create account.";
+
+                header("Location: /register.php");
+                exit;
+            }
 
             $_SESSION['success'] =
                 "Account created successfully. Please login.";
@@ -74,15 +88,22 @@ class AuthController
 
             if (!$user)
             {
-                $_SESSION['error'] = "Invalid email or password.";
+                $_SESSION['error'] =
+                    "Invalid email or password.";
 
                 header("Location: /login.php");
                 exit;
             }
 
-            if (!password_verify($password, $user['password']))
+            if (
+                !password_verify(
+                    $password,
+                    $user['password']
+                )
+            )
             {
-                $_SESSION['error'] = "Invalid email or password.";
+                $_SESSION['error'] =
+                    "Invalid email or password.";
 
                 header("Location: /login.php");
                 exit;

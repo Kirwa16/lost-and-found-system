@@ -1,26 +1,48 @@
 <?php
 
+session_save_path(__DIR__ . '/../../sessions');
 session_start();
 
-if(!isset($_SESSION['user_id']))
+if (!isset($_SESSION['user_id']))
 {
     header("Location: /login.php");
     exit;
 }
 
-if($_SESSION['role'] !== 'user')
-{
-    header("Location: /admin/dashboard.php");
-    exit;
-}
+require_once __DIR__ . '/../../backend/config/database.php';
 
-require_once __DIR__ . '/../../backend/models/MatchEngine.php';
+$db = new Database();
+$conn = $db->connect();
 
-$matchEngine = new MatchEngine();
+$stmt = $conn->prepare(
+    "SELECT
+        m.id,
+        m.confidence_score,
+        m.status,
 
-$matches = $matchEngine->getUserMatches(
-    $_SESSION['user_id']
+        l.item_name AS lost_item,
+        l.category,
+
+        f.item_name AS found_item
+
+     FROM matches m
+
+     INNER JOIN lost_items l
+        ON l.id = m.lost_item_id
+
+     INNER JOIN found_items f
+        ON f.id = m.found_item_id
+
+     WHERE l.user_id = :user_id
+
+     ORDER BY m.created_at DESC"
 );
+
+$stmt->execute([
+    ':user_id' => $_SESSION['user_id']
+]);
+
+$matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 
@@ -51,151 +73,122 @@ $matches = $matchEngine->getUserMatches(
     <?php include __DIR__ . '/../components/user-sidebar.php'; ?>
 
     <div class="main">
+
         <?php include __DIR__ . '/../components/topbar.php'; ?>
 
         <div class="content">
 
-            <h1>My Matches</h1>
+            <h1>Potential Matches</h1>
 
-            <?php if(empty($matches)): ?>
+            <div class="card">
 
-                <div class="card">
+                <?php if(empty($matches)): ?>
 
-                    <h3>No Matches Found</h3>
+                    <p>No matches found.</p>
 
-                    <br>
+                <?php else: ?>
 
-                    <p>
-                        No potential matches have been detected yet.
-                    </p>
+                <table class="table">
 
-                </div>
+                    <thead>
 
-            <?php else: ?>
+                        <tr>
 
-                <div class="card">
+                            <th>ID</th>
+                            <th>Lost Item</th>
+                            <th>Found Item</th>
+                            <th>Category</th>
+                            <th>Confidence</th>
+                            <th>Status</th>
+                            <th>Action</th>
 
-                    <table class="table">
+                        </tr>
 
-                        <thead>
+                    </thead>
 
-                            <tr>
+                    <tbody>
 
-                                <th>#</th>
-                                <th>Lost Item</th>
-                                <th>Found Item</th>
-                                <th>Category</th>
-                                <th>Confidence</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                    <?php foreach($matches as $match): ?>
 
-                            </tr>
+                        <tr>
 
-                        </thead>
+                            <td>
+                                <?= $match['id'] ?>
+                            </td>
 
-                        <tbody>
+                            <td>
+                                <?= htmlspecialchars($match['lost_item']) ?>
+                            </td>
 
-                        <?php $count = 1; ?>
+                            <td>
+                                <?= htmlspecialchars($match['found_item']) ?>
+                            </td>
 
-                        <?php foreach($matches as $match): ?>
+                            <td>
+                                <?= htmlspecialchars($match['category']) ?>
+                            </td>
 
-                            <tr>
+                            <td>
+                                <?= $match['confidence_score'] ?>%
+                            </td>
 
-                                <td>
-                                    <?= $count++ ?>
-                                </td>
+                            <td>
 
-                                <td>
-                                    <?= htmlspecialchars($match['lost_item']) ?>
-                                </td>
+                                <?php if($match['status'] === 'approved'): ?>
 
-                                <td>
-                                    <?= htmlspecialchars($match['found_item']) ?>
-                                </td>
+                                    <span class="badge badge-success">
+                                        Approved
+                                    </span>
 
-                                <td>
-                                    <?= htmlspecialchars($match['category']) ?>
-                                </td>
+                                <?php elseif($match['status'] === 'rejected'): ?>
 
-                                <td>
+                                    <span class="badge badge-danger">
+                                        Rejected
+                                    </span>
 
-                                    <?php
-                                    $score = (int)$match['confidence_score'];
+                                <?php else: ?>
 
-                                    if($score >= 90)
-                                    {
-                                        echo '<span class="badge badge-success">'
-                                            . $score . '%</span>';
-                                    }
-                                    elseif($score >= 75)
-                                    {
-                                        echo '<span class="badge badge-warning">'
-                                            . $score . '%</span>';
-                                    }
-                                    else
-                                    {
-                                        echo '<span class="badge badge-danger">'
-                                            . $score . '%</span>';
-                                    }
-                                    ?>
+                                    <span class="badge badge-warning">
+                                        Pending
+                                    </span>
 
-                                </td>
+                                <?php endif; ?>
 
-                                <td>
+                            </td>
 
-                                    <?php if($match['status'] === 'approved'): ?>
+                            <td>
 
-                                        <span class="badge badge-success">
-                                            Approved
-                                        </span>
+                                <?php if($match['status'] === 'approved'): ?>
 
-                                    <?php elseif($match['status'] === 'rejected'): ?>
+                                    <a
+                                        href="/user/submit-claim.php?match_id=<?= $match['id'] ?>"
+                                        class="action-btn">
 
-                                        <span class="badge badge-danger">
-                                            Rejected
-                                        </span>
+                                        Submit Claim
 
-                                    <?php else: ?>
+                                    </a>
 
-                                        <span class="badge badge-warning">
-                                            Pending
-                                        </span>
+                                <?php else: ?>
 
-                                    <?php endif; ?>
+                                    <span style="color:#64748b;">
+                                        Awaiting Review
+                                    </span>
 
-                                </td>
+                                <?php endif; ?>
 
-                                <td>
+                            </td>
 
-                                    <?php if($match['status'] === 'pending'): ?>
+                        </tr>
 
-                                        <a
-                                            href="submit-claim.php?match_id=<?= $match['id'] ?>"
-                                            class="action-btn">
+                    <?php endforeach; ?>
 
-                                            Submit Claim
+                    </tbody>
 
-                                        </a>
+                </table>
 
-                                    <?php else: ?>
+                <?php endif; ?>
 
-                                        Completed
-
-                                    <?php endif; ?>
-
-                                </td>
-
-                            </tr>
-
-                        <?php endforeach; ?>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            <?php endif; ?>
+            </div>
 
         </div>
 

@@ -49,7 +49,7 @@ include __DIR__ . '/components/header.php';
             ?>
 
             <form
-                action="../public/process-register.php"
+                action="/process-register.php"
                 method="POST"
                 id="registerForm">
 
@@ -98,7 +98,7 @@ include __DIR__ . '/components/header.php';
 
             <div class="link">
                 Already have an account?
-                <a href="login.php">
+                <a href="/login.php">
                     Login
                 </a>
             </div>

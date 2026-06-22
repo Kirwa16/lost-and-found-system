@@ -1,5 +1,6 @@
 <?php
 
+session_save_path(__DIR__ . '/../../sessions');
 session_start();
 
 if(!isset($_SESSION['user_id']))
@@ -13,11 +14,6 @@ if($_SESSION['role'] !== 'user')
     header("Location: /admin/dashboard.php");
     exit;
 
-}
-if($_SESSION['role'] === 'admin')
-{
-    header("Location: /admin/dashboard.php");
-    exit;
 }
 
 require_once __DIR__ . '/../../backend/config/database.php';
