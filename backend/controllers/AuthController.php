@@ -1,122 +1,68 @@
 <?php
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-session_start();
-
+require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 
-class AuthController
-{
+class AuthController {
+    private $db;
     private $user;
 
-    public function __construct()
-    {
-        $this->user = new User();
+    public function __construct() {
+        $database = new Database();
+        $this->db = $database->getConnection();
+        $this->user = new User($this->db);
     }
 
-    public function register()
-    {
-        if(isset($_POST['register']))
-        {
-            $fullname = trim($_POST['fullname']);
-            $email = trim($_POST['email']);
+    // Handle Registration
+    public function register() {
+        $data = json_decode(file_get_contents("php://input"));
 
-            $password = $_POST['password'];
-            $confirmPassword = $_POST['confirm_password'];
+        if(!empty($data->full_name) && !empty($data->email) && !empty($data->password) && !empty($data->student_staff_id) && !empty($data->phone_number)) {
+            
+            $this->user->full_name = $data->full_name;
+            $this->user->email = $data->email;
+            $this->user->password = $data->password;
+            $this->user->student_staff_id = $data->student_staff_id;
+            $this->user->phone_number = $data->phone_number;
+            $this->user->role = 'student';
 
-            if($password !== $confirmPassword)
-            {
-                $_SESSION['error'] = "Passwords do not match.";
-
-                header("Location: ../public/register.php");
-                exit;
+            if($this->user->register()) {
+                http_response_code(201);
+                echo json_encode(array("message" => "User was successfully registered."));
+            } else {
+                http_response_code(503);
+                echo json_encode(array("message" => "Unable to register user."));
             }
-
-            $existingUser = $this->user->findByEmail($email);
-
-            if($existingUser)
-            {
-                $_SESSION['error'] = "Email already exists.";
-
-                header("Location: ../public/register.php");
-                exit;
-            }
-
-            $hashedPassword = password_hash(
-                $password,
-                PASSWORD_DEFAULT
-            );
-
-            $this->user->register(
-                $fullname,
-                $email,
-                $hashedPassword
-            );
-
-            $_SESSION['success'] =
-                "Account created successfully. Please login.";
-
-            header("Location: ../public/login.php");
-            exit;
+        } else {
+            http_response_code(400);
+            echo json_encode(array("message" => "Unable to register user. Data is incomplete."));
         }
     }
 
-    public function login()
-    {
-        if(isset($_POST['login']))
-        {
-            $email = trim($_POST['email']);
-            $password = $_POST['password'];
+    // Handle Login
+    public function login() {
+        $data = json_decode(file_get_contents("php://input"));
 
-            $user = $this->user->findByEmail($email);
+        if(!empty($data->email) && !empty($data->password)) {
+            
+            $this->user->email = $data->email;
+            $this->user->password = $data->password;
 
-            if(!$user)
-            {
-                $_SESSION['error'] = "Invalid email or password.";
-
-                header("Location: ../public/login.php");
-                exit;
+            if($this->user->login()) {
+                http_response_code(200);
+                echo json_encode(array(
+                    "message" => "Login successful.",
+                    "user_id" => $this->user->user_id,
+                    "full_name" => $this->user->full_name,
+                    "role" => $this->user->role
+                ));
+            } else {
+                http_response_code(401);
+                echo json_encode(array("message" => "Login failed. Invalid email or password."));
             }
-
-            if(!password_verify(
-                $password,
-                $user['password']
-            ))
-            {
-                $_SESSION['error'] = "Invalid email or password.";
-
-                header("Location: login.php");
-                exit;
-            }
-
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['fullname'] = $user['fullname'];
-            $_SESSION['role'] = $user['role'];
-
-            if($user['role'] === 'admin')
-            {
-                header("Location: /frontend/admin/dashboard.php");
-            }
-            else
-            {
-                header("Location: /frontend/user/dashboard.php");
-            }
-
-            exit;
+        } else {
+            http_response_code(400);
+            echo json_encode(array("message" => "Unable to login. Data is incomplete."));
         }
     }
 }
-
-$auth = new AuthController();
-
-if(isset($_POST['register']))
-{
-    $auth->register();
-}
-
-if(isset($_POST['login']))
-{
-    $auth->login();
-}
+?>
