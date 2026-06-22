@@ -127,7 +127,7 @@ $recentClaims = $conn->query(
 
     <div class="main">
 
-        <?php include __DIR__ . '/components/topbar.php'; ?>
+        <?php include __DIR__ . '/../components/topbar.php'; ?>
 
         <div class="content">
 
