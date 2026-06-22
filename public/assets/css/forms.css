@@ -212,3 +212,20 @@ body{
         padding:30px;
     }
 }
+
+.menu a{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.menu a i{
+    width:20px;
+    text-align:center;
+}
+
+.logo h2{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}

@@ -64,7 +64,7 @@ if (isset($_GET['search']))
 
     <div class="main">
 
-        <?php include __DIR__ . '/../components/topbar.php'; ?>
+        <?php include __DIR__ . '/../components/topbar-user.php'; ?>
 
         <div class="content">
 

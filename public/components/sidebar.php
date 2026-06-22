@@ -25,14 +25,14 @@
 
         <li>
             <a href="/admin/items.php">
-                <i class="fas fa-box"></i>
+                <i class="fas fa-box-open"></i>
                 Items
             </a>
         </li>
 
         <li>
             <a href="/admin/matches.php">
-                <i class="fas fa-link"></i>
+                <i class="fas fa-handshake"></i>
                 Matches
             </a>
         </li>
@@ -58,12 +58,6 @@
             </a>
         </li>
 
-        <li>
-            <a href="/logout.php">
-                <i class="fas fa-right-from-bracket"></i>
-                Logout
-            </a>
-        </li>
 
     </ul>
 

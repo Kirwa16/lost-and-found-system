@@ -74,7 +74,7 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     <div class="main">
 
-        <?php include __DIR__ . '/../components/topbar.php'; ?>
+        <?php include __DIR__ . '/../components/topbar-user.php'; ?>
 
         <div class="content">
 

@@ -22,7 +22,7 @@ if(
     !isset($_GET['type'])
 )
 {
-    header("Location: items.php");
+    header("Location: /admin/items.php");
     exit;
 }
 
@@ -31,7 +31,7 @@ $type = $_GET['type'];
 
 if(!in_array($type, ['lost', 'found']))
 {
-    header("Location: items.php");
+    header("Location: /admin/items.php");
     exit;
 }
 
@@ -86,11 +86,11 @@ if(!$item)
 
 <div class="admin-layout">
 
-    <?php include __DIR__ . '/../components/sidebar.php'; ?>
+    <?php include __DIR__ . '/components/sidebar.php'; ?>
 
     <div class="main">
 
-        <?php include __DIR__ . '/../components/topbar.php'; ?>
+        <?php include __DIR__ . '/components/topbar.php'; ?>
 
         <div class="content">
 
