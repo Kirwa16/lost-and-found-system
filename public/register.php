@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../frontend/components/header.php';
+include __DIR__ . '/components/header.php';
 ?>
 
 <div class="auth-wrapper">
@@ -127,5 +127,5 @@ document.getElementById('registerForm')
 });
 </script>
 
-<?php include '../components/footer.php'; ?>
+<?php include __DIR__ . '/components/footer.php'; ?>
 

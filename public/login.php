@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../frontend/components/header.php';
+include __DIR__ . '/components/header.php';
 ?>
 
 <div class="auth-wrapper">
@@ -44,7 +44,7 @@ include '../frontend/components/header.php';
             
 
             <form
-            action="../public/process-login.php"
+            action="process-login.php"
             method="POST">
 
                 <div class="form-group">
@@ -84,4 +84,4 @@ include '../frontend/components/header.php';
 
 </div>
 
-<?php include '../components/footer.php'; ?>
+<?php include __DIR__ . '/components/footer.php'; ?>
