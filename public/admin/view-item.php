@@ -41,7 +41,7 @@ $table =
     : 'found_items';
 
 $db = new Database();
-$conn = $db->connect();
+$conn = $db->getConnection();
 
 $stmt = $conn->prepare(
     "SELECT *

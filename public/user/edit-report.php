@@ -31,7 +31,7 @@ if(!isset($_GET['id']))
 $id = (int)$_GET['id'];
 
 $db = new Database();
-$conn = $db->connect();
+$conn = $db->getConnection();
 
 if($_SERVER['REQUEST_METHOD'] === 'POST')
 {

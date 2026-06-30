@@ -18,7 +18,7 @@ if($_SESSION['role'] !== 'user')
 require_once __DIR__ . '/../../backend/config/database.php';
 
 $db = new Database();
-$conn = $db->connect();
+$conn = $db->getConnection();
 
 /*
 |--------------------------------------------------------------------------

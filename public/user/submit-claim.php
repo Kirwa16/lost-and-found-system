@@ -26,7 +26,7 @@ if(!isset($_GET['match_id']))
 $matchId = (int)$_GET['match_id'];
 
 $db = new Database();
-$conn = $db->connect();
+$conn = $db->getConnection();
 
 /*
 |--------------------------------------------------------------------------

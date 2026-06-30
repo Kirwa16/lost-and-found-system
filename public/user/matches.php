@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id']))
 require_once __DIR__ . '/../../backend/config/database.php';
 
 $db = new Database();
-$conn = $db->connect();
+$conn = $db->getConnection();
 
 $stmt = $conn->prepare(
     "SELECT

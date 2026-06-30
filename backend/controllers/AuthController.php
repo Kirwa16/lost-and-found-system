@@ -1,142 +1,90 @@
 <?php
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-session_save_path(__DIR__ . '/../../sessions');
-
-session_start();
-
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/User.php';
 
-
-
-class AuthController
-{
+class AuthController {
+    private $db;
     private $user;
 
-    public function __construct()
-    {
+    public function __construct() {
         $database = new Database();
-        $db = $database->connect();
-
-        $this->user = new User($db);
+        $this->db = $database->getConnection();
+        $this->user = new User($this->db);
     }
 
-    public function register()
-    {
-        if (isset($_POST['register']))
-        {
-            $fullname = trim($_POST['fullname']);
-            $email = trim($_POST['email']);
-
-            $password = $_POST['password'];
-            $confirmPassword = $_POST['confirm_password'];
-
-            if ($password !== $confirmPassword)
-            {
-                $_SESSION['error'] = "Passwords do not match.";
-
-                header("Location: /register.php");
-                exit;
+    // Public method to handle all requests
+    public function handleRequest() {
+        $method = $_SERVER['REQUEST_METHOD'];
+        
+        if ($method === 'POST') {
+            $input = json_decode(file_get_contents("php://input"));
+            
+            // Check if this is a login or register request based on the data
+            if (isset($input->password) && isset($input->fullname)) {
+                $this->register($input);
+            } elseif (isset($input->email) && isset($input->password)) {
+                $this->login($input);
+            } else {
+                http_response_code(400);
+                echo json_encode(["message" => "Invalid request data"]);
             }
-
-            $existingUser = $this->user->findByEmail($email);
-
-            if ($existingUser)
-            {
-                $_SESSION['error'] = "Email already exists.";
-
-                header("Location: /register.php");
-                exit;
-            }
-
-            $hashedPassword = password_hash(
-                $password,
-                PASSWORD_DEFAULT
-            );
-
-            if (
-                !$this->user->register(
-                    $fullname,
-                    $email,
-                    $hashedPassword
-                )
-            ) {
-                $_SESSION['error'] =
-                    "Failed to create account.";
-
-                header("Location: /register.php");
-                exit;
-            }
-
-            $_SESSION['success'] =
-                "Account created successfully. Please login.";
-
-            header("Location: /login.php");
-            exit;
+        } else {
+            http_response_code(405);
+            echo json_encode(["message" => "Method Not Allowed"]);
         }
     }
 
-    public function login()
-    {
-        if (isset($_POST['login']))
-        {
-            $email = trim($_POST['email']);
-            $password = $_POST['password'];
+    // Private method for login
+    private function login($data) {
+        if(!empty($data->email) && !empty($data->password)) {
+            $this->user->email = $data->email;
+            $this->user->password = $data->password;
 
-            $user = $this->user->findByEmail($email);
+            if($this->user->login()) {
+                http_response_code(200);
+                echo json_encode(array(
+                    "message" => "Login successful.",
+                    "user_id" => $this->user->id,
+                    "fullname" => $this->user->fullname,
+                    "role" => $this->user->role
+                ));
+            } else {
+                http_response_code(401);
+                echo json_encode(array("message" => "Invalid email or password."));
+            }
+        } else {
+            http_response_code(400);
+            echo json_encode(array("message" => "Unable to login. Data is incomplete."));
+        }
+    }
 
-            if (!$user)
-            {
-                $_SESSION['error'] =
-                    "Invalid email or password.";
-
-                header("Location: /login.php");
-                exit;
+    // Private method for register
+    private function register($data) {
+        if(!empty($data->fullname) && !empty($data->email) && !empty($data->password)) {
+            
+            // Check if email already exists
+            $this->user->email = $data->email;
+            if($this->user->emailExists()) {
+                http_response_code(400);
+                echo json_encode(array("message" => "Email already exists."));
+                return;
             }
 
-            if (
-                !password_verify(
-                    $password,
-                    $user['password']
-                )
-            )
-            {
-                $_SESSION['error'] =
-                    "Invalid email or password.";
+            $this->user->fullname = $data->fullname;
+            $this->user->email = $data->email;
+            $this->user->password = $data->password;
 
-                header("Location: /login.php");
-                exit;
+            if($this->user->register()) {
+                http_response_code(201);
+                echo json_encode(array("message" => "User was successfully registered."));
+            } else {
+                http_response_code(503);
+                echo json_encode(array("message" => "Unable to register user."));
             }
-
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['fullname'] = $user['fullname'];
-            $_SESSION['role'] = $user['role'];
-
-            if ($user['role'] === 'admin')
-            {
-                header("Location: /admin/dashboard.php");
-            }
-            else
-            {
-                header("Location: /user/dashboard.php");
-            }
-
-            exit;
+        } else {
+            http_response_code(400);
+            echo json_encode(array("message" => "Unable to register user. Data is incomplete."));
         }
     }
 }
-
-$auth = new AuthController();
-
-if (isset($_POST['register']))
-{
-    $auth->register();
-}
-
-if (isset($_POST['login']))
-{
-    $auth->login();
-}
+?>

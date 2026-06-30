@@ -1,79 +1,99 @@
 <?php
-
-class User
-{
+class User {
     private $conn;
-    private $table = "users";
+    private $table_name = "users";
 
-    public function __construct($db)
-    {
+    // Object properties (matching your database)
+    public $id;
+    public $fullname;
+    public $email;
+    public $password;
+    public $role;
+    public $created_at;
+
+    public function __construct($db) {
         $this->conn = $db;
     }
 
-    public function findByEmail($email)
-    {
-        $sql = "SELECT * FROM {$this->table}
-                WHERE email = :email
-                LIMIT 1";
-
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->execute([
-            ':email' => $email
-        ]);
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+ // Register new user
+public function register() {
+    // First check if email exists
+    if($this->emailExists()) {
+        return false; // Email already exists
     }
 
-    public function register($fullname, $email, $password)
-    {
-        $sql = "INSERT INTO {$this->table}
-                (
-                    fullname,
-                    email,
-                    password
-                )
-                VALUES
-                (
-                    :fullname,
-                    :email,
-                    :password
-                )";
+    $query = "INSERT INTO " . $this->table_name . "
+            SET
+                fullname = :fullname,
+                email = :email,
+                password = :password,
+                role = 'user'";
 
-        $stmt = $this->conn->prepare($sql);
+    $stmt = $this->conn->prepare($query);
 
-        return $stmt->execute([
-            ':fullname' => $fullname,
-            ':email'    => $email,
-            ':password' => $password
-        ]);
-    }
+    // Hash password
+    $this->password = password_hash($this->password, PASSWORD_BCRYPT);
 
-    public function getById($id)
-    {
-        $sql = "SELECT *
-                FROM {$this->table}
-                WHERE id = :id
-                LIMIT 1";
+    $stmt->bindParam(":fullname", $this->fullname);
+    $stmt->bindParam(":email", $this->email);
+    $stmt->bindParam(":password", $this->password);
 
-        $stmt = $this->conn->prepare($sql);
-
-        $stmt->execute([
-            ':id' => $id
-        ]);
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    public function getAll()
-    {
-        $sql = "SELECT *
-                FROM {$this->table}
-                ORDER BY created_at DESC";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        if($stmt->execute()) {
+            return true;
+        }
+        return false;
+    } catch (PDOException $e) {
+        // Catch duplicate entry error
+        if ($e->getCode() == 23000) {
+            return false; // Email already exists
+        }
+        throw $e; // Re-throw other errors
     }
 }
+
+    // Login user
+    public function login() {
+        $query = "SELECT id, fullname, email, password, role 
+                  FROM " . $this->table_name . " 
+                  WHERE email = ? LIMIT 0,1";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(1, $this->email);
+        $stmt->execute();
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if($row && password_verify($this->password, $row['password'])) {
+            $this->id = $row['id'];
+            $this->fullname = $row['fullname'];
+            $this->email = $row['email'];
+            $this->role = $row['role'];
+            return true;
+        }
+        return false;
+    }
+
+    // Check if email exists
+    public function emailExists() {
+        $query = "SELECT id, fullname, email, password, role 
+                  FROM " . $this->table_name . " 
+                  WHERE email = ? LIMIT 0,1";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(1, $this->email);
+        $stmt->execute();
+
+        $num = $stmt->rowCount();
+        if($num > 0) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $this->id = $row['id'];
+            $this->fullname = $row['fullname'];
+            $this->email = $row['email'];
+            $this->role = $row['role'];
+            return true;
+        }
+        return false;
+    }
+}
+?>

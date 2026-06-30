@@ -65,7 +65,7 @@ $claimModel->updateStatus(
 );
 
 $db = new Database();
-$conn = $db->connect();
+$conn = $db->getConnection();
 
 /*
 |--------------------------------------------------------------------------
