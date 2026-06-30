@@ -1,6 +1,6 @@
 <?php
 
-session_save_path(__DIR__ . '/../sessions');
+
 session_start();
 
 include __DIR__ . '/components/header.php';
@@ -46,9 +46,7 @@ include __DIR__ . '/components/header.php';
             ?>
             
 
-            <form
-            action="/process-login.php"
-            method="POST">
+            <form action="/process-login.php" method="POST">
 
                 <div class="form-group">
                     <input
