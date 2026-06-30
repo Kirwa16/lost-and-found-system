@@ -30,10 +30,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
             header("Location: /user/dashboard.php");
         }
         exit();
-    } else {
-        $_SESSION['error'] = "Invalid email or password.";
-        header("Location: /login.php");
-        exit();
     }
 }
 ?>
