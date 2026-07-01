@@ -74,11 +74,11 @@ if(!$item)
 
 <title>View Item</title>
 
-<link rel="stylesheet"
-      href="/assets/css/dashboard.css">
-
-<link rel="stylesheet"
-      href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/components/sidebar.css">
+<link rel="stylesheet" href="/assets/css/components/topbar.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 </head>
 

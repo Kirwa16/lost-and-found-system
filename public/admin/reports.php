@@ -1,6 +1,5 @@
 <?php
 
-session_save_path(__DIR__ . '/../../sessions');
 session_start();
 
 if(!isset($_SESSION['user_id']))
@@ -14,7 +13,6 @@ if($_SESSION['role'] !== 'admin')
     header("Location: /user/dashboard.php");
     exit;
 }
-
 require_once __DIR__ . '/../../backend/config/database.php';
 
 $db = new Database();
@@ -92,11 +90,13 @@ $recentLost = $conn->query(
 
 <title>System Reports</title>
 
-<link rel="stylesheet"
-      href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/sidebar.css">
+<link rel="stylesheet" href="/assets/css/topbar.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-<link rel="stylesheet"
-      href="/assets/css/admin.css">
+<script src="/assets/js/sidebar.js"></script>
 
 </head>
 
@@ -105,8 +105,11 @@ $recentLost = $conn->query(
 <div class="admin-layout">
 
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
+    
 
-    <div class="main">
+    
+
+    <div class="main" id="main">
 
         <?php include __DIR__ . '/../components/topbar.php'; ?>
 

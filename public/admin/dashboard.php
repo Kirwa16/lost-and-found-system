@@ -116,7 +116,15 @@ $recentClaims = $conn->query(
     <title>Admin Dashboard</title>
     <link rel="stylesheet" href="/assets/css/dashboard.css">
     <link rel="stylesheet" href="/assets/css/admin.css">
+    <link rel="stylesheet" href="/assets/css/sidebar.css">
+    <link rel="stylesheet" href="/assets/css/topbar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+
+    <script src="/assets/js/sidebar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
 </head>
 
 <body>
@@ -125,7 +133,7 @@ $recentClaims = $conn->query(
 
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
-    <div class="main">
+    <div class="main" id="main">
 
         <?php include __DIR__ . '/../components/topbar.php'; ?>
 

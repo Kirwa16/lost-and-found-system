@@ -1,262 +1,173 @@
 <?php
-
-session_save_path(__DIR__ . '/../../sessions');
 session_start();
 
-if(!isset($_SESSION['user_id']))
-{
+if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
     exit;
 }
 
-if($_SESSION['role'] !== 'admin')
-{
+if ($_SESSION['role'] !== 'admin') {
     header("Location: /user/dashboard.php");
     exit;
 }
 
-?>
+require_once __DIR__ . '/../../backend/controllers/SettingsController.php';
 
+$controller = new SettingsController();
+
+$message = "";
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $result = $controller->update($_POST);
+
+    if ($result['success']) {
+        $message = $result['message'];
+    } else {
+        $errors = $result['errors'];
+    }
+}
+
+$settings = $controller->index();
+?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>System Settings</title>
 
-<link rel="stylesheet"
-      href="/assets/css/dashboard.css">
-
-<link rel="stylesheet"
-      href="/assets/css/admin.css">
-
-<style>
-
-.settings-container{
-    margin-top:20px;
-}
-
-.settings-section{
-    background:white;
-    padding:25px;
-    border-radius:15px;
-    margin-bottom:20px;
-    box-shadow:0 4px 10px rgba(0,0,0,.08);
-    border:1px solid #e2e8f0;
-}
-
-.settings-section h2{
-    margin-bottom:20px;
-    color:#334155;
-}
-
-.form-group{
-    margin-bottom:20px;
-}
-
-.form-group label{
-    display:block;
-    margin-bottom:8px;
-    font-weight:600;
-    color:#334155;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea{
-    width:100%;
-    padding:12px;
-    border:1px solid #cbd5e1;
-    border-radius:8px;
-    outline:none;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus{
-    border-color:#334155;
-    box-shadow:0 0 0 3px rgba(51,65,85,.15);
-}
-
-.save-btn{
-    background:#334155;
-    color:white;
-    border:none;
-    padding:12px 25px;
-    border-radius:8px;
-    cursor:pointer;
-    transition:.3s;
-}
-
-.save-btn:hover{
-    background:#1e293b;
-}
-
-.switch{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin-top:10px;
-}
-
-.switch label{
-    margin:0;
-    font-weight:500;
-}
-
-</style>
-
+<link rel="stylesheet" href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/sidebar.css">
+<link rel="stylesheet" href="/assets/css/topbar.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
-
 <body>
 
 <div class="admin-layout">
 
-    <?php include __DIR__ . '/../components/sidebar.php'; ?>
+<?php include __DIR__ . '/../components/sidebar.php'; ?>
 
-    <div class="main">
+<div class="main" id="main">
 
-        <?php include __DIR__ . '/../components/topbar.php'; ?>
+<?php include __DIR__ . '/../components/topbar.php'; ?>
 
-        <div class="content">
+<div class="content">
 
-            <h1>System Settings</h1>
+<h1>System Settings</h1>
 
-            <div class="settings-container">
+<?php if($message): ?>
+<div class="success"><?= htmlspecialchars($message) ?></div>
+<?php endif; ?>
 
-                <!-- System Settings -->
+<?php if(!empty($errors)): ?>
+<div class="error">
+<ul>
+<?php foreach($errors as $error): ?>
+<li><?= htmlspecialchars($error) ?></li>
+<?php endforeach; ?>
+</ul>
+</div>
+<?php endif; ?>
 
-                <div class="settings-section">
+<form method="POST">
 
-                    <h2>System Information</h2>
+<div class="settings-container">
 
-                    <div class="form-group">
+<div class="settings-section">
+<h2><i class="fas fa-server"></i> System Information</h2>
 
-                        <label>System Name</label>
+<div class="form-group">
+<label>System Name</label>
+<input type="text" name="system_name"
+value="<?= htmlspecialchars($settings['system_name'] ?? '') ?>">
+</div>
 
-                        <input
-                            type="text"
-                            value="Lost & Found Management System">
-
-                    </div>
-
-                    <div class="form-group">
-
-                        <label>University Name</label>
-
-                        <input
-                            type="text"
-                            value="Strathmore University">
-
-                    </div>
-
-                </div>
-
-                <!-- Notifications -->
-
-                <div class="settings-section">
-
-                    <h2>Notifications</h2>
-
-                    <div class="switch">
-
-                        <input type="checkbox" checked>
-
-                        <label>Email Notifications</label>
-
-                    </div>
-
-                    <div class="switch">
-
-                        <input type="checkbox" checked>
-
-                        <label>Claim Alerts</label>
-
-                    </div>
-
-                    <div class="switch">
-
-                        <input type="checkbox">
-
-                        <label>SMS Notifications</label>
-
-                    </div>
-
-                </div>
-
-                <!-- Security -->
-
-                <div class="settings-section">
-
-                    <h2>Security</h2>
-
-                    <div class="form-group">
-
-                        <label>
-                            Minimum Password Length
-                        </label>
-
-                        <select>
-                            <option>6</option>
-                            <option selected>8</option>
-                            <option>10</option>
-                            <option>12</option>
-                        </select>
-
-                    </div>
-
-                    <div class="form-group">
-
-                        <label>
-                            Session Timeout (Minutes)
-                        </label>
-
-                        <input
-                            type="number"
-                            value="30">
-
-                    </div>
-
-                </div>
-
-                <!-- Appearance -->
-
-                <div class="settings-section">
-
-                    <h2>Appearance</h2>
-
-                    <div class="form-group">
-
-                        <label>Theme</label>
-
-                        <select>
-                            <option selected>Light</option>
-                            <option>Dark</option>
-                        </select>
-
-                    </div>
-
-                </div>
-
-                <!-- Save Button -->
-
-                <button class="save-btn">
-                    Save Changes
-                </button>
-
-            </div>
-
-        </div>
-
-    </div>
+<div class="form-group">
+<label>Institution Name</label>
+<input type="text" name="institution_name"
+value="<?= htmlspecialchars($settings['institution_name'] ?? '') ?>">
+</div>
 
 </div>
 
-</body>
+<div class="settings-section">
+<h2><i class="fas fa-bell"></i> Notifications</h2>
 
+<div class="switch">
+<input type="checkbox" id="email_notifications"
+name="email_notifications"
+<?= (($settings['email_notifications'] ?? '0')=='1')?'checked':''; ?>>
+<label for="email_notifications">Enable Email Notifications</label>
+</div>
+
+<div class="switch">
+<input type="checkbox" id="claim_notifications"
+name="claim_notifications"
+<?= (($settings['claim_notifications'] ?? '0')=='1')?'checked':''; ?>>
+<label for="claim_notifications">Enable Claim Notifications</label>
+</div>
+
+</div>
+
+<div class="settings-section">
+<h2><i class="fas fa-shield-alt"></i> Security</h2>
+
+<div class="form-group">
+<label>Minimum Password Length</label>
+<select name="minimum_password_length">
+<?php foreach([6,8,10,12] as $len): ?>
+<option value="<?= $len ?>"
+<?= (($settings['minimum_password_length'] ?? '8') == (string)$len)?'selected':''; ?>>
+<?= $len ?>
+</option>
+<?php endforeach; ?>
+</select>
+</div>
+
+<div class="form-group">
+<label>Session Timeout (Minutes)</label>
+<input type="number" min="5"
+name="session_timeout"
+value="<?= htmlspecialchars($settings['session_timeout'] ?? '30') ?>">
+</div>
+
+</div>
+
+<div class="settings-section">
+<h2><i class="fas fa-palette"></i> Appearance</h2>
+
+<div class="form-group">
+<label>Theme</label>
+<select name="theme">
+<option value="light"
+<?= (($settings['theme'] ?? 'light')=='light')?'selected':''; ?>>
+Light
+</option>
+
+<option value="dark"
+<?= (($settings['theme'] ?? 'light')=='dark')?'selected':''; ?>>
+Dark
+</option>
+</select>
+</div>
+
+</div>
+
+<button type="submit" class="save-btn">
+<i class="fas fa-save"></i> Save Changes
+</button>
+
+</div>
+
+</form>
+
+</div>
+</div>
+</div>
+
+<script src="/assets/js/sidebar.js"></script>
+
+</body>
 </html>

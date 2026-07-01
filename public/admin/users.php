@@ -1,6 +1,6 @@
 <?php
 
-session_save_path(__DIR__ . '/../../sessions');
+
 session_start();
 
 if(!isset($_SESSION['user_id']))
@@ -88,11 +88,13 @@ $users = $conn
 
 <title>User Management</title>
 
-<link rel="stylesheet"
-      href="/assets/css/dashboard.css">
+<link rel="stylesheet"href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/sidebar.css">
+<link rel="stylesheet" href="/assets/css/topbar.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-<link rel="stylesheet"
-      href="/assets/css/admin.css">
+<script src="/assets/js/sidebar.js"></script>
 
 </head>
 
@@ -102,7 +104,7 @@ $users = $conn
 
     <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
-    <div class="main">
+    <div class="main" id="main">
 
         <?php include __DIR__ . '/../components/topbar.php'; ?>
 
@@ -117,7 +119,7 @@ $users = $conn
                     <thead>
 
                         <tr>
-                            <th>#</th>
+                            <th>User No.</th>
                             <th>Full Name</th>
                             <th>Email</th>
                             <th>Role</th>

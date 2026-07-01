@@ -1,6 +1,13 @@
 <div class="topbar">
 
-    <h1>Admin Panel</h1>
+    <button class="sidebar-toggle" id="sidebarToggle">
+    <i class="fas fa-bars"></i>
+    </button>
+
+
+    <div class="topbar-center">
+        <h1>Admin Panel</h1>
+    </div>
 
     <div class="topbar-right">
 
@@ -18,6 +25,7 @@
 
         <a href="/logout.php"
            class="logout-btn">
+           <i class="fas fa-sign-out-alt"></i>
             Logout
         </a>
 
