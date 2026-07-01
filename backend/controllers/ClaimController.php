@@ -54,4 +54,9 @@ class ClaimController
     {
         return $this->claimModel->rejectClaim($id);
     }
+    
+    public function userClaims(int $userId): array
+{
+    return $this->claimModel->getClaimsByUser($userId);
+}
 }

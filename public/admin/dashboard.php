@@ -200,7 +200,7 @@ $recentClaims = $conn->query(
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>Item No.</th>
                             <th>Item</th>
                             <th>Category</th>
                             <th>Date</th>
@@ -231,7 +231,7 @@ $recentClaims = $conn->query(
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>Item No.</th>
                             <th>Item</th>
                             <th>Category</th>
                             <th>Date</th>
@@ -262,7 +262,7 @@ $recentClaims = $conn->query(
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>Claim No.</th>
                             <th>Status</th>
                             <th>Date</th>
                         </tr>

@@ -1,58 +1,73 @@
 <?php
+
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../models/ItemMatch.php';  // Changed from Match.php
+require_once __DIR__ . '/../models/ItemMatch.php';
 
-class MatchController {
-    private $db;
-    private $match;
+class MatchController
+{
+    private ItemMatch $matchModel;
 
-    public function __construct() {
+    public function __construct()
+    {
         $database = new Database();
-        $this->db = $database->getConnection();
-        $this->match = new ItemMatch($this->db);  // Changed from Match to ItemMatch
+        $db = $database->getConnection();
+
+        $this->matchModel = new ItemMatch($db);
     }
 
-    public function handleRequest() {
-        $method = $_SERVER['REQUEST_METHOD'];
-
-        if ($method === 'GET') {
-            $this->readPending();
-        } elseif ($method === 'PUT') {
-            $this->updateStatus();
-        } else {
-            http_response_code(405);
-            echo json_encode(["message" => "Method Not Allowed"]);
-        }
+    /**
+     * Get all matches
+     */
+    public function index(): array
+    {
+        return $this->matchModel->getAllMatches();
     }
 
-    private function readPending() {
-        $stmt = $this->match->readPending();
-        $matches_arr = [];
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            array_push($matches_arr, $row);
-        }
-        http_response_code(200);
-        echo json_encode(["matches" => $matches_arr]);
+    /**
+     * Get pending matches
+     */
+    public function pending(): array
+    {
+        return $this->matchModel->getPendingMatches();
     }
 
-    private function updateStatus() {
-        $data = json_decode(file_get_contents("php://input"));
+    /**
+     * Get matches for a specific user
+     */
+    public function userMatches(int $userId): array
+    {
+        return $this->matchModel->getMatchesByUser($userId);
+    }
 
-        if(!empty($data->id) && !empty($data->status)) {
-            $this->match->id = $data->id;
-            $this->match->status = $data->status;
+    /**
+     * Get a single match
+     */
+    public function show(int $id): ?array
+    {
+        return $this->matchModel->getMatchById($id);
+    }
 
-            if($this->match->updateStatus()) {
-                http_response_code(200);
-                echo json_encode(["message" => "Match status updated successfully."]);
-            } else {
-                http_response_code(503);
-                echo json_encode(["message" => "Unable to update match."]);
-            }
-        } else {
-            http_response_code(400);
-            echo json_encode(["message" => "Data is incomplete."]);
-        }
+    /**
+     * Approve a match
+     */
+    public function approve(int $id): bool
+    {
+        return $this->matchModel->approveMatch($id);
+    }
+
+    /**
+     * Reject a match
+     */
+    public function reject(int $id): bool
+    {
+        return $this->matchModel->rejectMatch($id);
+    }
+
+    /**
+     * Delete a match
+     */
+    public function delete(int $id): bool
+    {
+        return $this->matchModel->deleteMatch($id);
     }
 }
-?>

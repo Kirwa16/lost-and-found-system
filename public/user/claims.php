@@ -1,6 +1,5 @@
 <?php
 
-session_save_path(__DIR__ . '/../../sessions');
 session_start();
 
 if (!isset($_SESSION['user_id']))
@@ -9,13 +8,11 @@ if (!isset($_SESSION['user_id']))
     exit;
 }
 
-require_once __DIR__ . '/../../backend/models/Claim.php';
+require_once __DIR__ . '/../../backend/controllers/ClaimController.php';
 
-$claimModel = new Claim();
+$controller = new ClaimController();
 
-$claims = $claimModel->getClaimsByUser(
-    $_SESSION['user_id']
-);
+$claims = $controller->userClaims($_SESSION['user_id']);
 
 ?>
 
@@ -31,21 +28,21 @@ $claims = $claimModel->getClaimsByUser(
 
 <title>My Claims</title>
 
-<link rel="stylesheet"
-      href="/assets/css/dashboard.css">
-
-<link rel="stylesheet"
-      href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/sidebar.css">
+<link rel="stylesheet" href="/assets/css/topbar.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 </head>
 
 <body>
 
-<div class="admin-layout">
+<div class="user-layout">
 
     <?php include __DIR__ . '/../components/user-sidebar.php'; ?>
 
-    <div class="main">
+    <div class="main" id="main">
 
         <?php include __DIR__ . '/../components/topbar-user.php'; ?>
 
@@ -67,65 +64,78 @@ $claims = $claimModel->getClaimsByUser(
 
                         <tr>
 
-                            <th>ID</th>
-                            <th>Match ID</th>
-                            <th>Message</th>
+                            <th>Claim No.</th>
+                            <th>Lost Item</th>
+                            <th>Found Item</th>
                             <th>Status</th>
-                            <th>Date</th>
+                            <th>Date Submitted</th>
+                            <th>Action</th>
 
                         </tr>
 
                     </thead>
 
                     <tbody>
+                        <?php $count = 1; ?>
 
-                    <?php foreach($claims as $claim): ?>
+                        <?php foreach ($claims as $claim): ?>
 
-                        <tr>
+                            <?php
 
-                            <td>
-                                <?= $claim['id'] ?>
-                            </td>
+switch ($claim['status']) {
 
-                            <td>
-                                <?= $claim['match_id'] ?>
-                            </td>
+    case 'approved':
+        $badge = 'badge-success';
+        break;
 
-                            <td>
-                                <?= htmlspecialchars($claim['claim_message']) ?>
-                            </td>
+    case 'rejected':
+        $badge = 'badge-danger';
+        break;
 
-                            <td>
+    default:
+        $badge = 'badge-warning';
+        break;
 
-                                <?php if($claim['status'] === 'approved'): ?>
+}
 
-                                    <span class="badge badge-success">
-                                        Approved
-                                    </span>
+?>
 
-                                <?php elseif($claim['status'] === 'rejected'): ?>
+<tr>
 
-                                    <span class="badge badge-danger">
-                                        Rejected
-                                    </span>
+    <td><?= $count++; ?></td>
 
-                                <?php else: ?>
+    <td><?= htmlspecialchars($claim['lost_item']); ?></td>
 
-                                    <span class="badge badge-warning">
-                                        Pending
-                                    </span>
+    <td><?= htmlspecialchars($claim['found_item']); ?></td>
 
-                                <?php endif; ?>
+    <td>
+        <span class="badge <?= $badge ?>">
+            <?= ucfirst($claim['status']) ?>
+        </span>
+    </td>
 
-                            </td>
+    <td>
+        <?= date('d M Y', strtotime($claim['created_at'])) ?>
+    </td>
 
-                            <td>
-                                <?= date('d M Y', strtotime($claim['created_at'])) ?>
-                            </td>
+    <td>
 
-                        </tr>
+        <a
+            href="claim-details.php?id=<?= $claim['id'] ?>"
+            class="action-btn view">
 
-                    <?php endforeach; ?>
+            <i class="fas fa-eye"></i>
+
+            View
+
+        </a>
+
+    </td>
+
+</tr>
+
+<?php endforeach; ?>
+                    
 
                     </tbody>
 
@@ -140,7 +150,7 @@ $claims = $claimModel->getClaimsByUser(
     </div>
 
 </div>
-
+<script src="/assets/js/sidebar.js"></script>
 </body>
 
 </html>

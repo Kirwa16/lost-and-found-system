@@ -2,59 +2,29 @@
 
 session_start();
 
-if(!isset($_SESSION['user_id']))
-{
+if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
     exit;
 }
 
-if($_SESSION['role'] !== 'admin')
-{
+if ($_SESSION['role'] !== 'admin') {
     header("Location: /user/dashboard.php");
     exit;
 }
 
-require_once __DIR__ . '/../../backend/config/database.php';
+require_once __DIR__ . '/../../backend/controllers/MatchController.php';
 
-$db = new Database();
-$conn = $db->getConnection();
-
-$stmt = $conn->query(
-    "SELECT
-        m.id,
-        m.confidence_score,
-        m.created_at,
-
-        l.item_name AS lost_item,
-        l.category AS lost_category,
-
-        f.item_name AS found_item,
-        f.category AS found_category
-
-     FROM matches m
-
-     INNER JOIN lost_items l
-        ON m.lost_item_id = l.id
-
-     INNER JOIN found_items f
-        ON m.found_item_id = f.id
-
-     ORDER BY m.created_at DESC"
-);
-
-$matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$controller = new MatchController();
+$matches = $controller->index();
 
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
 
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Detected Matches</title>
 
@@ -64,122 +34,150 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <link rel="stylesheet" href="/assets/css/topbar.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-<script src="/assets/js/sidebar.js"></script>
-
 </head>
 
 <body>
 
 <div class="admin-layout">
 
-    <?php include __DIR__ . '/../components/sidebar.php'; ?>
+<?php include __DIR__ . '/../components/sidebar.php'; ?>
 
-    <div class="main" id="main">
+<div class="main" id="main">
 
-        <?php include __DIR__ . '/../components/topbar.php'; ?>
+<?php include __DIR__ . '/../components/topbar.php'; ?>
 
-        <div class="content">
+<div class="content">
 
-            <h1>Detected Matches</h1>
+<h1>Detected Matches</h1>
 
-            <div class="card">
+<?php if (isset($_GET['success'])): ?>
+<div class="success"><?= htmlspecialchars($_GET['success']) ?></div>
+<?php endif; ?>
 
-                <?php if(empty($matches)): ?>
+<?php if (isset($_GET['error'])): ?>
+<div class="error"><?= htmlspecialchars($_GET['error']) ?></div>
+<?php endif; ?>
 
-                    <p>No matches found.</p>
+<div class="card">
 
-                <?php else: ?>
+<?php if (empty($matches)): ?>
 
-                    <table class="table">
+<p>No matches found.</p>
 
-                        <thead>
+<?php else: ?>
 
-                            <tr>
+<table class="table">
 
-                                <th>Match No.</th>
-                                <th>Lost Item</th>
-                                <th>Found Item</th>
-                                <th>Category</th>
-                                <th>Confidence</th>
-                                <th>Date Matched</th>
+<thead>
+<tr>
+<th>Match No.</th>
+<th>Lost Item</th>
+<th>Found Item</th>
+<th>Category</th>
+<th>Confidence</th>
+<th>Status</th>
+<th>Date Matched</th>
+<th>Actions</th>
+</tr>
+</thead>
 
-                            </tr>
+<tbody>
 
-                        </thead>
+<?php $count = 1; ?>
 
-                        <tbody>
+<?php foreach ($matches as $match): ?>
 
-                        <?php $count = 1; ?>
+<?php
+switch ($match['status']) {
+    case 'approved':
+        $statusBadge = 'badge-success';
+        break;
+    case 'rejected':
+        $statusBadge = 'badge-danger';
+        break;
+    default:
+        $statusBadge = 'badge-warning';
+        break;
+}
 
-                        <?php foreach($matches as $match): ?>
+$score = (float)$match['confidence_score'];
 
-                            <tr>
+if ($score >= 90) {
+    $confidenceBadge = 'badge-success';
+} elseif ($score >= 75) {
+    $confidenceBadge = 'badge-warning';
+} else {
+    $confidenceBadge = 'badge-danger';
+}
+?>
 
-                                <td>
-                                    <?= $count++ ?>
-                                </td>
+<tr>
 
-                                <td>
-                                    <?= htmlspecialchars($match['lost_item']) ?>
-                                </td>
+<td><?= $count++; ?></td>
 
-                                <td>
-                                    <?= htmlspecialchars($match['found_item']) ?>
-                                </td>
+<td><?= htmlspecialchars($match['lost_item']) ?></td>
 
-                                <td>
-                                    <?= htmlspecialchars($match['lost_category']) ?>
-                                </td>
+<td><?= htmlspecialchars($match['found_item']) ?></td>
 
-                                <td>
+<td><?= htmlspecialchars($match['category']) ?></td>
 
-                                    <?php
-                                    $score = (int)$match['confidence_score'];
+<td>
+<span class="badge <?= $confidenceBadge ?>">
+<?= number_format($score,2) ?>%
+</span>
+</td>
 
-                                    if($score >= 90)
-                                    {
-                                        echo '<span class="badge badge-success">'
-                                            . $score . '%</span>';
-                                    }
-                                    elseif($score >= 75)
-                                    {
-                                        echo '<span class="badge badge-warning">'
-                                            . $score . '%</span>';
-                                    }
-                                    else
-                                    {
-                                        echo '<span class="badge badge-danger">'
-                                            . $score . '%</span>';
-                                    }
-                                    ?>
+<td>
+<span class="badge <?= $statusBadge ?>">
+<?= ucfirst($match['status']) ?>
+</span>
+</td>
 
-                                </td>
+<td><?= date('d M Y', strtotime($match['created_at'])) ?></td>
 
-                                <td>
-                                    <?= date(
-                                        'd M Y',
-                                        strtotime($match['created_at'])
-                                    ) ?>
-                                </td>
+<td>
 
-                            </tr>
+<a href="match-details.php?id=<?= $match['id'] ?>" class="action-btn view">
+<i class="fas fa-eye"></i> View
+</a>
 
-                        <?php endforeach; ?>
+<?php if ($match['status'] === 'pending'): ?>
 
-                        </tbody>
+<a href="process-match.php?id=<?= $match['id'] ?>&action=approve"
+class="action-btn approve"
+onclick="return confirm('Approve this match?')">
+<i class="fas fa-check"></i> Approve
+</a>
 
-                    </table>
+<a href="process-match.php?id=<?= $match['id'] ?>&action=reject"
+class="action-btn delete"
+onclick="return confirm('Reject this match?')">
+<i class="fas fa-times"></i> Reject
+</a>
 
-                <?php endif; ?>
+<?php endif; ?>
 
-            </div>
+</td>
 
-        </div>
+</tr>
 
-    </div>
+<?php endforeach; ?>
+
+</tbody>
+
+</table>
+
+<?php endif; ?>
 
 </div>
 
-</body>
+</div>
 
+</div>
+
+</div>
+
+<script src="/assets/js/sidebar.js"></script>
+
+</body>
 </html>

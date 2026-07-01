@@ -345,4 +345,43 @@ if ($status !== 'pending') {
 
     return (int)$stmt->fetchColumn();
 }
+
+public function getClaimsByUser(int $userId): array
+{
+    $sql = "
+        SELECT
+            c.id,
+            c.user_id,
+            c.match_id,
+            c.claim_message,
+            c.status,
+            c.created_at,
+
+            l.item_name AS lost_item,
+            f.item_name AS found_item
+
+        FROM claims c
+
+        INNER JOIN matches m
+            ON c.match_id = m.id
+
+        INNER JOIN lost_items l
+            ON m.lost_item_id = l.id
+
+        INNER JOIN found_items f
+            ON m.found_item_id = f.id
+
+        WHERE c.user_id = :user_id
+
+        ORDER BY c.created_at DESC
+    ";
+
+    $stmt = $this->conn->prepare($sql);
+
+    $stmt->execute([
+        ':user_id' => $userId
+    ]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 }

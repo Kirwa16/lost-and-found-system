@@ -179,7 +179,7 @@ $recentLost = $conn->query(
 
                         <tr>
 
-                            <th>#</th>
+                            <th>Report No.</th>
                             <th>Item Name</th>
                             <th>Category</th>
                             <th>Date Reported</th>

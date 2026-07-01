@@ -1,6 +1,6 @@
 <?php
 
-session_save_path(__DIR__ . '/../../sessions');
+
 session_start();
 
 if (!isset($_SESSION['user_id']))
@@ -58,21 +58,21 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <title>My Matches</title>
 
-<link rel="stylesheet"
-      href="/assets/css/dashboard.css">
-
-<link rel="stylesheet"
-      href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/admin.css">
+<link rel="stylesheet" href="/assets/css/sidebar.css">
+<link rel="stylesheet" href="/assets/css/topbar.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 </head>
 
 <body>
 
-<div class="admin-layout">
+<div class="user-layout">
 
     <?php include __DIR__ . '/../components/user-sidebar.php'; ?>
 
-    <div class="main">
+    <div class="main" id="main">
 
         <?php include __DIR__ . '/../components/topbar-user.php'; ?>
 
@@ -94,7 +94,7 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <tr>
 
-                            <th>ID</th>
+                            <th>Match No.</th>
                             <th>Lost Item</th>
                             <th>Found Item</th>
                             <th>Category</th>
@@ -107,31 +107,20 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </thead>
 
                     <tbody>
+                        <?php $count = 1; ?>
 
                     <?php foreach($matches as $match): ?>
 
                         <tr>
+                            <td><?= $count++; ?></td>
 
-                            <td>
-                                <?= $match['id'] ?>
-                            </td>
+                                <td><?= htmlspecialchars($match['lost_item']) ?></td>
 
-                            <td>
-                                <?= htmlspecialchars($match['lost_item']) ?>
-                            </td>
+                                <td><?= htmlspecialchars($match['found_item']) ?></td>
 
-                            <td>
-                                <?= htmlspecialchars($match['found_item']) ?>
-                            </td>
+                                <td><?= htmlspecialchars($match['category']) ?></td>
 
-                            <td>
-                                <?= htmlspecialchars($match['category']) ?>
-                            </td>
-
-                            <td>
-                                <?= $match['confidence_score'] ?>%
-                            </td>
-
+                                <td><?= number_format($match['confidence_score'], 2) ?>%</td>
                             <td>
 
                                 <?php if($match['status'] === 'approved'): ?>
@@ -195,7 +184,7 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
 </div>
-
+<script src="/assets/js/sidebar.js"></script>
 </body>
 
 </html>
