@@ -127,7 +127,7 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <h3>
 
-                            Notification #<?= $count++ ?>
+                            Notification <?= $count++ ?>
 
                             <?php if(!$notification['is_read']): ?>
 

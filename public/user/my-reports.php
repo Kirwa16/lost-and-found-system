@@ -111,8 +111,8 @@ $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                             <tr>
 
-                                <th>#</th>
-                                <th>Item</th>
+                                <th>Report No.</th>
+                                <th>Item Name</th>
                                 <th>Category</th>
                                 <th>Location</th>
                                 <th>Date Lost</th>

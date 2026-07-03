@@ -1,0 +1,156 @@
+/* ==================================================
+   USERS PAGE
+================================================== */
+
+/* ==================================================
+   TOOLBAR
+================================================== */
+
+.toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    margin-bottom:25px;
+}
+
+.search-form{
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.search-form input{
+    width:320px;
+}
+
+/* ==================================================
+   ACTIONS
+================================================== */
+
+.actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:nowrap;
+}
+
+.actions .action-btn{
+    min-width:90px;
+}
+
+/* ==================================================
+   MODAL
+================================================== */
+
+.modal{
+    position:fixed;
+    inset:0;
+
+    display:none;
+    justify-content:center;
+    align-items:center;
+
+    background:rgba(0,0,0,.5);
+
+    z-index:999;
+}
+
+.modal.show{
+    display:flex;
+}
+
+.modal-content{
+
+    width:500px;
+    max-width:95%;
+
+    background:#fff;
+
+    padding:30px;
+
+    border-radius:15px;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.15);
+
+    animation:modalFade .25s ease;
+
+}
+
+.modal-content h2{
+    margin-bottom:20px;
+}
+
+.modal-buttons{
+
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+
+    margin-top:25px;
+
+}
+
+/* ==================================================
+   ANIMATION
+================================================== */
+
+@keyframes modalFade{
+
+    from{
+
+        opacity:0;
+        transform:translateY(-20px);
+
+    }
+
+    to{
+
+        opacity:1;
+        transform:translateY(0);
+
+    }
+
+}
+
+/* ==================================================
+   RESPONSIVE
+================================================== */
+
+@media(max-width:768px){
+
+    .toolbar{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .search-form{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .search-form input,
+    .search-form button{
+        width:100%;
+    }
+
+    .actions{
+        flex-direction:column;
+        align-items:stretch;
+    }
+
+    .actions .action-btn{
+        width:100%;
+    }
+
+    .modal-content{
+        width:95%;
+        padding:20px;
+    }
+
+    .action-btn{
+        min-width:unset;
+    }
+
+
+}

@@ -1,0 +1,32 @@
+.form-group input[readonly]{
+            background:#f5f5f5;
+            cursor:not-allowed;
+            color:#555;
+        }
+.password-wrapper{
+            position:relative;
+        }
+
+.password-wrapper input{
+            width:100%;
+        }
+
+.password-wrapper i{
+            position:absolute;
+            top:50%;
+            right:15px;
+            transform:translateY(-50%);
+            cursor:pointer;
+            color:#666;
+        }
+
+.section-text{
+            color:#777;
+            margin-bottom:10px;
+        }
+
+        .success,
+        .error{
+            transition:opacity .3s ease;
+        }
+

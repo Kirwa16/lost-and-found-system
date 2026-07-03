@@ -78,17 +78,7 @@
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
             </a>
-        </li>
-
-        <!-- ACCOUNT -->
-        <li class="menu-title">ACCOUNT</li>
-
-        <li class="<?= $currentPage == 'profile.php' ? 'active' : '' ?>">
-            <a href="/user/profile.php">
-                <i class="fas fa-user"></i>
-                <span>Profile</span>
-            </a>
-        </li>
+</li>
 
     </ul>
 
