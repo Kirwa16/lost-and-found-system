@@ -1,15 +1,15 @@
 <?php
-
+/* Skeleton redesigned admin/items.php
+ * Replace model calls with your LostItem/FoundItem models as you implement them.
+ */
 session_start();
 
-if(!isset($_SESSION['user_id']))
-{
+if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
     exit;
 }
 
-if($_SESSION['role'] !== 'admin')
-{
+if ($_SESSION['role'] !== 'admin') {
     header("Location: /user/dashboard.php");
     exit;
 }
@@ -19,412 +19,196 @@ require_once __DIR__ . '/../../backend/config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
-/*
-|--------------------------------------------------------------------------
-| Filters
-|--------------------------------------------------------------------------
-*/
-
+$search = trim($_GET['search'] ?? '');
+$type = $_GET['type'] ?? 'all';
+$status = $_GET['status'] ?? 'all';
 $sort = $_GET['sort'] ?? 'desc';
-$typeFilter = $_GET['type'] ?? 'all';
 
-$order = ($sort === 'asc') ? 'ASC' : 'DESC';
+$order = $sort === 'asc' ? 'ASC' : 'DESC';
 
-/*
-|--------------------------------------------------------------------------
-| Lost Items
-|--------------------------------------------------------------------------
-*/
+$sql = "
+SELECT
+    li.id,
+    'Lost' AS item_type,
+    li.item_name,
+    li.category,
+    li.status,
+    li.created_at,
+    u.fullname
+FROM lost_items li
+JOIN users u ON li.user_id=u.id
 
-$lostItems = [];
+UNION ALL
 
-if($typeFilter === 'all' || $typeFilter === 'lost')
-{
-    $lostItems = $conn->query(
-        "SELECT
-            id,
-            item_name,
-            category,
-            status,
-            created_at
-         FROM lost_items
-         ORDER BY created_at $order"
-    )->fetchAll(PDO::FETCH_ASSOC);
+SELECT
+    fi.id,
+    'Found' AS item_type,
+    fi.item_name,
+    fi.category,
+    fi.status,
+    fi.created_at,
+    u.fullname
+FROM found_items fi
+JOIN users u ON fi.user_id=u.id
+";
+
+$items = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+if ($search !== '') {
+    $items = array_filter($items, fn($i)=>stripos($i['item_name'],$search)!==false);
+}
+if ($type !== 'all') {
+    $items = array_filter($items, fn($i)=>strtolower($i['item_type'])==$type);
+}
+if ($status !== 'all') {
+    $items = array_filter($items, fn($i)=>$i['status']==$status);
 }
 
-/*
-|--------------------------------------------------------------------------
-| Found Items
-|--------------------------------------------------------------------------
-*/
-
-$foundItems = [];
-
-if($typeFilter === 'all' || $typeFilter === 'found')
-{
-    $foundItems = $conn->query(
-        "SELECT
-            id,
-            item_name,
-            category,
-            status,
-            created_at
-         FROM found_items
-         ORDER BY created_at $order"
-    )->fetchAll(PDO::FETCH_ASSOC);
-}
-
+$total=count($items);
+$lost=count(array_filter($items,fn($i)=>$i['item_type']=="Lost"));
+$found=count(array_filter($items,fn($i)=>$i['item_type']=="Found"));
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Manage Items</title>
 
 <link rel="stylesheet" href="/assets/css/dashboard.css">
 <link rel="stylesheet" href="/assets/css/admin.css">
 <link rel="stylesheet" href="/assets/css/sidebar.css">
 <link rel="stylesheet" href="/assets/css/topbar.css">
+<link rel="stylesheet" href="/assets/css/items.css">
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-
-<script src="/assets/js/sidebar.js"></script>
-
-
 </head>
-
 <body>
 
 <div class="admin-layout">
 
-    <?php include __DIR__ . '/../components/sidebar.php'; ?>
+<?php include __DIR__.'/../components/sidebar.php'; ?>
 
-    <div class="main" id="main">
+<div class="main" id="main">
 
-        <?php include __DIR__ . '/../components/topbar.php'; ?>
+<?php include __DIR__.'/../components/topbar.php'; ?>
 
-        <div class="content">
+<div class="content">
 
-            <h1>Manage Items</h1>
+<h1>Manage Items</h1>
 
-            <?php if(isset($_GET['success'])): ?>
+<div class="stats-grid">
+<div class="stat-card"><h3>Total</h3><p><?= $total ?></p></div>
+<div class="stat-card"><h3>Lost</h3><p><?= $lost ?></p></div>
+<div class="stat-card"><h3>Found</h3><p><?= $found ?></p></div>
+</div>
 
-                <div class="success">
+<form class="filters" method="GET">
 
-                    Item deleted successfully.
+<input type="text" name="search" placeholder="Search item..." value="<?= htmlspecialchars($search) ?>">
 
-                </div>
+<select name="type">
+<option value="all">All Types</option>
+<option value="lost" <?= $type=='lost'?'selected':'' ?>>Lost</option>
+<option value="found" <?= $type=='found'?'selected':'' ?>>Found</option>
+</select>
 
-            <?php endif; ?>
+<select name="status">
+<option value="all">All Status</option>
+<option value="pending">Pending</option>
+<option value="matched">Matched</option>
+<option value="claimed">Claimed</option>
+</select>
 
-            <?php if(isset($_GET['error'])): ?>
+<select name="sort">
+<option value="desc">Newest</option>
+<option value="asc">Oldest</option>
+</select>
 
-                <div class="error">
+<button class="action-btn">Apply</button>
 
-                    Unable to delete item.
-                    It may be linked to matches or claims.
+</form>
 
-                </div>
+<div class="card">
 
-            <?php endif; ?>
+<table class="table">
 
-            <!-- Filters -->
+<thead>
+<tr>
+<th>Item No.</th>
+<th>Type</th>
+<th>Item</th>
+<th>Category</th>
+<th>Reported By</th>
+<th>Status</th>
+<th>Date</th>
+<th>Actions</th>
+</tr>
+</thead>
 
-            <div class="card">
+<tbody>
 
-                <form method="GET">
+<?php $i=1; foreach($items as $item): ?>
 
-                    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:end;">
+<tr>
 
-                        <div class="form-group">
+<td><?= $i++ ?></td>
 
-                            <label>Item Type</label>
+<td><?= $item['item_type'] ?></td>
 
-                            <select name="type">
+<td><?= htmlspecialchars($item['item_name']) ?></td>
 
-                                <option value="all"
-                                    <?= $typeFilter === 'all' ? 'selected' : '' ?>>
-                                    All Items
-                                </option>
+<td><?= htmlspecialchars($item['category']) ?></td>
 
-                                <option value="lost"
-                                    <?= $typeFilter === 'lost' ? 'selected' : '' ?>>
-                                    Lost Items
-                                </option>
+<td><?= htmlspecialchars($item['fullname']) ?></td>
 
-                                <option value="found"
-                                    <?= $typeFilter === 'found' ? 'selected' : '' ?>>
-                                    Found Items
-                                </option>
+<td>
+<span class="badge <?= strtolower($item['status']) ?>">
+<?= ucfirst($item['status']) ?>
+</span>
+</td>
 
-                            </select>
+<td><?= date('d M Y',strtotime($item['created_at'])) ?></td>
 
-                        </div>
+<td>
 
-                        <div class="form-group">
+<a class="action-btn view-btn"
+href="view-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>">
+  <i class="fas fa-eye"></i>
+View
+</a>
 
-                            <label>Sort Order</label>
+<a class="action-btn edit-btn"
+href="edit-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>">
+  <i class="fas fa-edit"></i>
+Edit
+</a>
 
-                            <select name="sort">
+<a class="action-btn delete-btn"
+onclick="return confirm('Delete this item?')"
+href="delete-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>">
+  <i class="fas fa-trash"></i>
+Delete
+</a>
 
-                                <option value="desc"
-                                    <?= $sort === 'desc' ? 'selected' : '' ?>>
-                                    Newest First
-                                </option>
+</td>
 
-                                <option value="asc"
-                                    <?= $sort === 'asc' ? 'selected' : '' ?>>
-                                    Oldest First
-                                </option>
+</tr>
 
-                            </select>
+<?php endforeach; ?>
 
-                        </div>
+</tbody>
 
-                        <div class="form-group">
-
-                            <button
-                                type="submit"
-                                class="action-btn">
-
-                                Apply Filters
-
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-            <br>
-
-            <?php if($typeFilter === 'all' || $typeFilter === 'lost'): ?>
-
-            <div class="card">
-
-                <h2>Lost Items</h2>
-
-                <br>
-
-                <?php if(empty($lostItems)): ?>
-
-                    <p>No lost items found.</p>
-
-                <?php else: ?>
-
-                <table class="table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>Item No.</th>
-                            <th>Item</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Date Reported</th>
-                            <th>Actions</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                    <?php $count = 1; ?>
-
-                    <?php foreach($lostItems as $item): ?>
-
-                        <tr>
-
-                            <td>
-                                <?= $count++ ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars($item['item_name']) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars($item['category']) ?>
-                            </td>
-
-                            <td>
-                                <?= ucfirst($item['status']) ?>
-                            </td>
-
-                            <td>
-                                <?= date(
-                                    'd M Y',
-                                    strtotime($item['created_at'])
-                                ) ?>
-                            </td>
-
-                            <td>
-
-                                <a
-                                    href="view-item.php?type=lost&id=<?= $item['id'] ?>"
-                                    class="action-btn">
-
-                                    View
-
-                                </a>
-
-                                <a
-                                    href="edit-item.php?type=lost&id=<?= $item['id'] ?>"
-                                    class="action-btn">
-
-                                    Edit
-
-                                </a>
-
-                                <a
-                                    href="delete-item.php?type=lost&id=<?= $item['id'] ?>"
-                                    class="action-btn"
-                                    onclick="return confirm('Delete this item?')">
-
-                                    Delete
-
-                                </a>
-
-                            </td>
-
-                        </tr>
-
-                    <?php endforeach; ?>
-
-                    </tbody>
-
-                </table>
-
-                <?php endif; ?>
-
-            </div>
-
-            <br>
-
-            <?php endif; ?>
-
-            <?php if($typeFilter === 'all' || $typeFilter === 'found'): ?>
-
-            <div class="card">
-
-                <h2>Found Items</h2>
-
-                <br>
-
-                <?php if(empty($foundItems)): ?>
-
-                    <p>No found items found.</p>
-
-                <?php else: ?>
-
-                <table class="table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>Item No.</th>
-                            <th>Item</th>
-                            <th>Category</th>
-                            <th>Status</th>
-                            <th>Date Reported</th>
-                            <th>Actions</th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                    <?php $count = 1; ?>
-
-                    <?php foreach($foundItems as $item): ?>
-
-                        <tr>
-
-                            <td>
-                                <?= $count++ ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars($item['item_name']) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars($item['category']) ?>
-                            </td>
-
-                            <td>
-                                <?= ucfirst($item['status']) ?>
-                            </td>
-
-                            <td>
-                                <?= date(
-                                    'd M Y',
-                                    strtotime($item['created_at'])
-                                ) ?>
-                            </td>
-
-                            <td>
-
-                                <a
-                                    href="view-item.php?type=found&id=<?= $item['id'] ?>"
-                                    class="action-btn">
-
-                                    View
-
-                                </a>
-
-                                <a
-                                    href="edit-item.php?type=found&id=<?= $item['id'] ?>"
-                                    class="action-btn">
-
-                                    Edit
-
-                                </a>
-
-                                <a
-                                    href="delete-item.php?type=found&id=<?= $item['id'] ?>"
-                                    class="action-btn"
-                                    onclick="return confirm('Delete this item?')">
-
-                                    Delete
-
-                                </a>
-
-                            </td>
-
-                        </tr>
-
-                    <?php endforeach; ?>
-
-                    </tbody>
-
-                </table>
-
-                <?php endif; ?>
-
-            </div>
-
-            <?php endif; ?>
-
-        </div>
-
-    </div>
+</table>
 
 </div>
 
-</body>
+</div>
+</div>
+</div>
 
+<script src="/assets/js/sidebar.js"></script>
+<script src="/assets/js/items.js"></script>
+
+</body>
 </html>

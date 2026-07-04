@@ -68,17 +68,6 @@
             </a>
         </li>
 
-
-        <!-- System -->
-        <li class="menu-title">SYSTEM</li>
-
-        <li class="<?php echo ($currentPage === 'settings.php') ? 'active' : ''; ?>">
-            <a href="/admin/settings.php">
-                <i class="fas fa-cog"></i>
-                <span>Settings</span>
-            </a>
-        </li>
-
     </ul>
 
 </nav>
