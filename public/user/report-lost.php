@@ -76,7 +76,7 @@ if($_SESSION['role'] !== 'user')
             <div class="form-card">
 
                 <form
-                    action="/backend/controllers/ItemController.php"
+                    action="/api/lost-items.php"
                     method="POST"
                     enctype="multipart/form-data">
 

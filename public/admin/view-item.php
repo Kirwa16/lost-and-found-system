@@ -180,7 +180,7 @@ if(!$item)
                             <?php if(!empty($item['image'])): ?>
 
                                 <img
-                                    src="/backend/uploads/<?= htmlspecialchars($item['image']) ?>"
+                                    src="/<?= htmlspecialchars($item['image']) ?>"
                                     alt="Item Image"
                                     style="
                                         max-width:300px;

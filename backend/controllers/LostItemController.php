@@ -1,4 +1,8 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/LostItem.php';
 
@@ -23,8 +27,8 @@ class LostItemController {
                 $this->readAll();
             }
         } elseif ($method === 'POST') {
-            if (!empty($_FILES)) {
-                $this->createWithFile();
+            if (!empty($_POST) || $this->isMultipartRequest()) {
+                $this->createFromForm();
             } else {
                 $input = json_decode(file_get_contents("php://input"));
                 $this->create($input);
@@ -52,7 +56,13 @@ class LostItemController {
     }
 
     private function create($data) {
-        if(!empty($data->user_id) && !empty($data->item_name) && !empty($data->category) && !empty($data->description) && !empty($data->location_lost) && !empty($data->date_lost)) {
+        if(!$this->hasLoggedInUser()) {
+            http_response_code(401);
+            echo json_encode(["message" => "Please log in before reporting an item."]);
+            return;
+        }
+
+        if(!empty($data->item_name) && !empty($data->category) && !empty($data->description) && !empty($data->location_lost) && !empty($data->date_lost)) {
             $this->mapData($data);
             if($this->item->create()) {
                 http_response_code(201);
@@ -67,49 +77,62 @@ class LostItemController {
         }
     }
 
-    private function createWithFile() {
-        $target_dir = __DIR__ . "/../uploads/";
-        if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
-
-        $imageFileType = strtolower(pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION));
-        $check = getimagesize($_FILES["image"]["tmp_name"]);
-        
-        if($check !== false && $_FILES["image"]["size"] <= 5000000 && in_array($imageFileType, ["jpg","jpeg","png","gif"])) {
-            $new_filename = uniqid('lost_', true) . '.' . $imageFileType;
-            $target_file = $target_dir . $new_filename;
-
-            if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
-                $this->item->user_id = $_POST['user_id'];
-                $this->item->item_name = $_POST['item_name'];
-                $this->item->category = $_POST['category'];
-                $this->item->description = $_POST['description'];
-                $this->item->location_lost = $_POST['location_lost'];
-                $this->item->date_lost = $_POST['date_lost'];
-                $this->item->color = $_POST['color'] ?? null;
-                $this->item->brand_model = $_POST['brand_model'] ?? null;
-                $this->item->unique_features = $_POST['unique_features'] ?? null;
-                $this->item->image = "uploads/" . $new_filename;
-                $this->item->status = 'pending';
-
-                if($this->item->create()) {
-                    http_response_code(201);
-                    echo json_encode(["message" => "Lost item and image uploaded successfully."]);
-                } else {
-                    http_response_code(503);
-                    echo json_encode(["message" => "Unable to report item."]);
-                }
-            } else {
-                http_response_code(500);
-                echo json_encode(["message" => "Error uploading file."]);
-            }
-        } else {
-            http_response_code(400);
-            echo json_encode(["message" => "Invalid image file."]);
+    private function createFromForm() {
+        if(!$this->hasLoggedInUser()) {
+            $_SESSION['error'] = "Please log in before reporting an item.";
+            header("Location: /login.php");
+            exit;
         }
+
+        if(empty($_POST['item_name']) || empty($_POST['category']) || empty($_POST['description']) || empty($_POST['location_lost']) || empty($_POST['date_lost'])) {
+            $_SESSION['error'] = "Please fill in all required fields.";
+            header("Location: /user/report-lost.php");
+            exit;
+        }
+
+        $image = $this->uploadImage('lost_');
+        if($image['error'] !== null) {
+            $_SESSION['error'] = $image['error'];
+            header("Location: /user/report-lost.php");
+            exit;
+        }
+
+        $category = trim($_POST['category']);
+        if($category === 'Other' && !empty($_POST['custom_category'])) {
+            $category = trim($_POST['custom_category']);
+        }
+
+        $this->item->user_id = $_SESSION['user_id'];
+        $this->item->item_name = $_POST['item_name'];
+        $this->item->category = $category;
+        $this->item->description = $_POST['description'];
+        $this->item->location_lost = $_POST['location_lost'];
+        $this->item->date_lost = $_POST['date_lost'];
+        $this->item->color = $_POST['color'] ?? null;
+        $this->item->brand_model = $_POST['brand_model'] ?? null;
+        $this->item->unique_features = $_POST['unique_features'] ?? null;
+        $this->item->image = $image['path'];
+        $this->item->status = 'pending';
+
+        try {
+            if($this->item->create()) {
+                $_SESSION['success'] = "Item reported successfully";
+                header("Location: /user/my-reports.php");
+                exit;
+            }
+        } catch (Throwable $e) {
+            $_SESSION['error'] = "Unable to report item.";
+            header("Location: /user/report-lost.php");
+            exit;
+        }
+
+        $_SESSION['error'] = "Unable to report item.";
+        header("Location: /user/report-lost.php");
+        exit;
     }
 
     private function mapData($data) {
-        $this->item->user_id = $data->user_id;
+        $this->item->user_id = $_SESSION['user_id'];
         $this->item->item_name = $data->item_name;
         $this->item->category = $data->category;
         $this->item->description = $data->description;
@@ -120,6 +143,52 @@ class LostItemController {
         $this->item->unique_features = $data->unique_features ?? null;
         $this->item->image = $data->image ?? null;
         $this->item->status = 'pending';
+    }
+
+    private function uploadImage($prefix) {
+        if(!isset($_FILES['image']) || $_FILES['image']['error'] === UPLOAD_ERR_NO_FILE) {
+            return ['path' => null, 'error' => null];
+        }
+
+        if($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+            return ['path' => null, 'error' => "Image upload failed."];
+        }
+
+        if($_FILES['image']['size'] > 5000000) {
+            return ['path' => null, 'error' => "Image must be 5MB or smaller."];
+        }
+
+        $imageFileType = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        if(!in_array($imageFileType, ["jpg", "jpeg", "png", "gif"], true)) {
+            return ['path' => null, 'error' => "Image must be a JPG, PNG, or GIF file."];
+        }
+
+        if(getimagesize($_FILES['image']['tmp_name']) === false) {
+            return ['path' => null, 'error' => "Invalid image file."];
+        }
+
+        $target_dir = __DIR__ . "/../../public/uploads/";
+        if(!is_dir($target_dir) && !mkdir($target_dir, 0777, true)) {
+            return ['path' => null, 'error' => "Unable to prepare upload folder."];
+        }
+
+        $new_filename = uniqid($prefix, true) . '.' . $imageFileType;
+        $target_file = $target_dir . $new_filename;
+
+        if(!move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
+            return ['path' => null, 'error' => "Error uploading file."];
+        }
+
+        return ['path' => "uploads/" . $new_filename, 'error' => null];
+    }
+
+    private function hasLoggedInUser() {
+        return isset($_SESSION['user_id']);
+    }
+
+    private function isMultipartRequest() {
+        return isset($_SERVER['CONTENT_TYPE'])
+            && stripos($_SERVER['CONTENT_TYPE'], 'multipart/form-data') !== false;
     }
 }
 ?>
