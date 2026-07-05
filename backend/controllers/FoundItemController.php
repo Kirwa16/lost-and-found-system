@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../models/FoundItem.php';
+require_once __DIR__ . '/../helpers/csrf.php';
 
 class FoundItemController {
     private $db;
@@ -67,6 +68,12 @@ class FoundItemController {
     }
 
     private function createFromForm() {
+        if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+            $_SESSION['error'] = "Security token expired. Please try again.";
+            header("Location: /user/report-found.php");
+            exit;
+        }
+
         if(!$this->hasLoggedInUser()) {
             $_SESSION['error'] = "Please log in before reporting an item.";
             header("Location: /login.php");
@@ -143,18 +150,28 @@ class FoundItemController {
             return ['path' => null, 'error' => "Image upload failed."];
         }
 
-        if($_FILES['image']['size'] > 5000000) {
-            return ['path' => null, 'error' => "Image must be 5MB or smaller."];
+        if($_FILES['image']['size'] > 2 * 1024 * 1024) {
+            return ['path' => null, 'error' => "Image must be 2MB or smaller."];
         }
 
-        $imageFileType = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-        if(!in_array($imageFileType, ["jpg", "jpeg", "png", "gif"], true)) {
+        $allowedMimeTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif'
+        ];
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($_FILES['image']['tmp_name']);
+
+        if(!isset($allowedMimeTypes[$mimeType])) {
             return ['path' => null, 'error' => "Image must be a JPG, PNG, or GIF file."];
         }
 
         if(getimagesize($_FILES['image']['tmp_name']) === false) {
             return ['path' => null, 'error' => "Invalid image file."];
         }
+
+        $imageFileType = $allowedMimeTypes[$mimeType];
 
         $target_dir = __DIR__ . "/../../public/uploads/";
         if(!is_dir($target_dir) && !mkdir($target_dir, 0777, true)) {

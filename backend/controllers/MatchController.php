@@ -40,6 +40,30 @@ class MatchController
     }
 
     /**
+     * Get lost items available for manual matching
+     */
+    public function pendingLostItems(): array
+    {
+        return $this->matchModel->getPendingLostItems();
+    }
+
+    /**
+     * Get found items available for manual matching
+     */
+    public function pendingFoundItems(): array
+    {
+        return $this->matchModel->getPendingFoundItems();
+    }
+
+    /**
+     * Create a manual match
+     */
+    public function create(int $lostItemId, int $foundItemId, float $confidenceScore = 100): bool
+    {
+        return $this->matchModel->create($lostItemId, $foundItemId, $confidenceScore);
+    }
+
+    /**
      * Get a single match
      */
     public function show(int $id): ?array

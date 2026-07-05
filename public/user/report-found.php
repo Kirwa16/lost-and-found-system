@@ -1,6 +1,7 @@
 <?php
 
 session_start();
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 if(!isset($_SESSION['user_id']))
 {
@@ -8,7 +9,7 @@ if(!isset($_SESSION['user_id']))
     exit;
 }
 
-if($_SESSION['role'] !== 'user')
+if(!in_array($_SESSION['role'], ['student', 'staff'], true))
 {
     header("Location: /admin/dashboard.php");
     exit;
@@ -51,18 +52,6 @@ if($_SESSION['role'] !== 'user')
 
             <h1>Report Found Item</h1>
 
-            <?php if(isset($_SESSION['success'])): ?>
-
-                <div class="success">
-
-                    <?= htmlspecialchars($_SESSION['success']) ?>
-
-                </div>
-
-                <?php unset($_SESSION['success']); ?>
-
-            <?php endif; ?>
-
             <?php if(isset($_SESSION['error'])): ?>
 
                 <div class="error">
@@ -81,6 +70,7 @@ if($_SESSION['role'] !== 'user')
                     action="/api/found-items.php"
                     method="POST"
                     enctype="multipart/form-data">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
 

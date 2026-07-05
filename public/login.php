@@ -2,6 +2,7 @@
 
 
 session_start();
+require_once __DIR__ . '/../backend/helpers/csrf.php';
 
 include __DIR__ . '/components/header.php';
 ?>
@@ -47,6 +48,7 @@ include __DIR__ . '/components/header.php';
             
 
             <form action="/process-login.php" method="POST">
+                <?= csrf_field() ?>
 
                 <div class="form-group">
                     <input
@@ -72,6 +74,12 @@ include __DIR__ . '/components/header.php';
                 </button>
 
             </form>
+
+            <div class="link">
+                <a href="/forgot-password.php">
+                    Forgot Password?
+                </a>
+            </div>
 
             <div class="link">
                 <a href="/register.php">

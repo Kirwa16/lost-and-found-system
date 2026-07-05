@@ -69,7 +69,7 @@ class Dashboard
             "SELECT COUNT(*)
              FROM claims
              WHERE user_id = :user_id
-             AND status = 'approved'"
+             AND status = 'collected'"
         );
 
         $stmt->execute([
@@ -156,4 +156,3 @@ class Dashboard
             ->fetchAll(PDO::FETCH_ASSOC);
     }
 }
-

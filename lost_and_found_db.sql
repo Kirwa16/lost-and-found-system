@@ -15,9 +15,10 @@ CREATE TABLE users
     password VARCHAR(255) NOT NULL,
 
     role ENUM(
-        'user',
-        'admin'
-    ) DEFAULT 'user',
+        'admin',
+        'student',
+        'staff'
+    ) DEFAULT 'student',
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -114,7 +115,8 @@ CREATE TABLE matches
     status ENUM(
         'pending',
         'approved',
-        'rejected'
+        'rejected',
+        'collected'
     ) DEFAULT 'pending',
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -137,14 +139,19 @@ CREATE TABLE claims
 
     user_id INT NOT NULL,
 
-    match_id INT NOT NULL,
+    match_id INT NULL,
+
+    item_id INT NULL,
+
+    item_type VARCHAR(20) NULL,
 
     claim_message TEXT NOT NULL,
 
     status ENUM(
         'pending',
         'approved',
-        'rejected'
+        'rejected',
+        'collected'
     ) DEFAULT 'pending',
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -171,6 +178,8 @@ CREATE TABLE notifications
 
     message TEXT NOT NULL,
 
+    link VARCHAR(255) NULL,
+
     is_read BOOLEAN DEFAULT FALSE,
 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -182,6 +191,14 @@ CREATE TABLE notifications
 );
 
 
-//expected tables
+CREATE INDEX idx_users_role_created_at ON users(role, created_at);
+CREATE INDEX idx_lost_items_status_created_at ON lost_items(status, created_at);
+CREATE INDEX idx_lost_items_category_created_at ON lost_items(category, created_at);
+CREATE INDEX idx_found_items_status_created_at ON found_items(status, created_at);
+CREATE INDEX idx_found_items_category_created_at ON found_items(category, created_at);
+CREATE INDEX idx_matches_status_created_at ON matches(status, created_at);
+CREATE INDEX idx_claims_status_created_at ON claims(status, created_at);
+CREATE INDEX idx_claims_match_user_status ON claims(match_id, user_id, status);
 
 
+-- expected tables

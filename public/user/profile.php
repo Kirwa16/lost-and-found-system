@@ -7,13 +7,14 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-if ($_SESSION['role'] !== 'user') {
+if (!in_array($_SESSION['role'], ['student', 'staff'], true)) {
     header("Location: /admin/dashboard.php");
     exit;
 }
 
 require_once __DIR__ . '/../../backend/config/database.php';
 require_once __DIR__ . '/../../backend/models/User.php';
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -35,6 +36,11 @@ if (!$user) {
 */
 
 if (isset($_POST['change_password'])) {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Security token expired. Please try again.";
+        header("Location: profile.php");
+        exit;
+    }
 
     $currentPassword = $_POST['current_password'];
     $newPassword = $_POST['new_password'];
@@ -216,6 +222,7 @@ if (isset($_POST['change_password'])) {
                 </p>
 
                 <form method="POST">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
 

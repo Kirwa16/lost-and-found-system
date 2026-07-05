@@ -17,9 +17,13 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 }
 
 require_once __DIR__ . '/../../backend/controllers/ClaimController.php';
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 $controller = new ClaimController();
 $claim = $controller->show((int)$_GET['id']);
+$backHref = ($_GET['from'] ?? '') === 'dashboard'
+    ? 'dashboard.php'
+    : 'claims.php';
 
 if (!$claim) {
     header("Location: claims.php");
@@ -30,11 +34,24 @@ switch ($claim['status']) {
     case 'approved':
         $badge='badge-success';
         break;
+    case 'collected':
+        $badge='badge-success';
+        break;
     case 'rejected':
         $badge='badge-danger';
         break;
     default:
         $badge='badge-warning';
+}
+
+$foundImage = null;
+if(!empty($claim['found_image'])) {
+    $foundImage = '/' . ltrim($claim['found_image'], '/');
+}
+
+$lostImage = null;
+if(!empty($claim['lost_image'])) {
+    $lostImage = '/' . ltrim($claim['lost_image'], '/');
 }
 ?>
 <!DOCTYPE html>
@@ -65,7 +82,19 @@ switch ($claim['status']) {
 
 <h1>Claim Details</h1>
 
-<div class="card">
+<div class="card claim-review">
+
+<div class="report-tabs" role="tablist">
+<button type="button" class="report-tab active" data-tab="claimTab" role="tab">Claim Details</button>
+<button type="button" class="report-tab" data-tab="foundItemTab" role="tab">Found Item</button>
+<?php if(($claim['claim_type'] ?? 'match') !== 'direct' || !empty($claim['lost_item'])): ?>
+<button type="button" class="report-tab" data-tab="lostItemTab" role="tab">
+<?= (($claim['claim_type'] ?? 'match') === 'direct') ? 'Related Lost Report' : 'Lost Item' ?>
+</button>
+<?php endif; ?>
+</div>
+
+<div id="claimTab" class="report-tab-panel active">
 
 <div class="form-group">
 <label>Claim ID</label>
@@ -83,13 +112,23 @@ switch ($claim['status']) {
 </div>
 
 <div class="form-group">
-<label>Lost Item</label>
-<p><?= htmlspecialchars($claim['lost_item']) ?></p>
+<label>Claim Type</label>
+<p><?= (($claim['claim_type'] ?? 'match') === 'direct') ? 'Direct item claim' : 'Matched item claim' ?></p>
 </div>
 
 <div class="form-group">
-<label>Found Item</label>
-<p><?= htmlspecialchars($claim['found_item']) ?></p>
+<label><?= (($claim['claim_type'] ?? 'match') === 'direct') ? 'Claiming' : 'Items' ?></label>
+<?php if(($claim['claim_type'] ?? 'match') === 'direct'): ?>
+<p><?= htmlspecialchars($claim['direct_item'] ?? $claim['found_item'] ?? 'Item') ?></p>
+<?php if(!empty($claim['lost_item'])): ?>
+<p>Related lost report: <?= htmlspecialchars($claim['lost_item']) ?></p>
+<?php endif; ?>
+<?php else: ?>
+<p>
+Lost: <?= htmlspecialchars($claim['lost_item']) ?> /
+Found: <?= htmlspecialchars($claim['found_item']) ?>
+</p>
+<?php endif; ?>
 </div>
 
 <div class="form-group">
@@ -107,28 +146,178 @@ switch ($claim['status']) {
 <p><?= date('d M Y H:i', strtotime($claim['created_at'])) ?></p>
 </div>
 
+</div>
+
+<div id="foundItemTab" class="report-tab-panel">
+
+<div class="detail-grid">
+
+<div class="form-group">
+<label>Item Name</label>
+<p><?= htmlspecialchars($claim['found_item'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Category</label>
+<p><?= htmlspecialchars($claim['found_category'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Color</label>
+<p><?= htmlspecialchars($claim['found_color'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Brand / Model</label>
+<p><?= htmlspecialchars($claim['found_brand_model'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Location Found</label>
+<p><?= htmlspecialchars($claim['location_found'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Date Found</label>
+<p><?= htmlspecialchars($claim['date_found'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Status</label>
+<p><?= htmlspecialchars(ucfirst($claim['found_status'] ?? 'N/A')) ?></p>
+</div>
+
+</div>
+
+<div class="form-group">
+<label>Distinguishing Features</label>
+<p><?= nl2br(htmlspecialchars($claim['found_unique_features'] ?? 'N/A')) ?></p>
+</div>
+
+<div class="form-group">
+<label>Description</label>
+<p><?= nl2br(htmlspecialchars($claim['found_description'] ?? 'N/A')) ?></p>
+</div>
+
+<div class="form-group">
+<label>Image</label>
+<?php if($foundImage): ?>
+<img class="report-image" src="<?= htmlspecialchars($foundImage) ?>" alt="<?= htmlspecialchars($claim['found_item'] ?? 'Found item') ?>">
+<?php else: ?>
+<p>No image uploaded.</p>
+<?php endif; ?>
+</div>
+
+</div>
+
+<?php if(($claim['claim_type'] ?? 'match') !== 'direct' || !empty($claim['lost_item'])): ?>
+
+<div id="lostItemTab" class="report-tab-panel">
+
+<div class="detail-grid">
+
+<div class="form-group">
+<label>Item Name</label>
+<p><?= htmlspecialchars($claim['lost_item'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Category</label>
+<p><?= htmlspecialchars($claim['lost_category'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Color</label>
+<p><?= htmlspecialchars($claim['lost_color'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Brand / Model</label>
+<p><?= htmlspecialchars($claim['lost_brand_model'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Location Lost</label>
+<p><?= htmlspecialchars($claim['location_lost'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Date Lost</label>
+<p><?= htmlspecialchars($claim['date_lost'] ?? 'N/A') ?></p>
+</div>
+
+<div class="form-group">
+<label>Status</label>
+<p><?= htmlspecialchars(ucfirst($claim['lost_status'] ?? 'N/A')) ?></p>
+</div>
+
+</div>
+
+<div class="form-group">
+<label>Distinguishing Features</label>
+<p><?= nl2br(htmlspecialchars($claim['lost_unique_features'] ?? 'N/A')) ?></p>
+</div>
+
+<div class="form-group">
+<label>Description</label>
+<p><?= nl2br(htmlspecialchars($claim['lost_description'] ?? 'N/A')) ?></p>
+</div>
+
+<div class="form-group">
+<label>Image</label>
+<?php if($lostImage): ?>
+<img class="report-image" src="<?= htmlspecialchars($lostImage) ?>" alt="<?= htmlspecialchars($claim['lost_item'] ?? 'Lost item') ?>">
+<?php else: ?>
+<p>No image uploaded.</p>
+<?php endif; ?>
+</div>
+
+</div>
+
+<?php endif; ?>
+
 <hr style="margin:25px 0;">
 
-<a href="claims.php" class="action-btn">
+<a href="<?= htmlspecialchars($backHref) ?>" class="action-btn">
 <i class="fas fa-arrow-left"></i>
 Back
 </a>
 
 <?php if ($claim['status']==='pending'): ?>
 
-<a href="process-claim.php?id=<?= $claim['id'] ?>&action=approve"
-class="action-btn approve"
-onclick="return confirm('Approve this claim?');">
+<form method="POST" action="process-claim.php" style="display:inline-flex;" onsubmit="return confirm('Approve this claim?');">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$claim['id'] ?>">
+<input type="hidden" name="action" value="approve">
+<button type="submit" class="action-btn approve">
 <i class="fas fa-check"></i>
 Approve
-</a>
+</button>
+</form>
 
-<a href="process-claim.php?id=<?= $claim['id'] ?>&action=reject"
-class="action-btn delete"
-onclick="return confirm('Reject this claim?');">
+<form method="POST" action="process-claim.php" style="display:inline-flex;" onsubmit="return confirm('Reject this claim?');">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$claim['id'] ?>">
+<input type="hidden" name="action" value="reject">
+<button type="submit" class="action-btn delete">
 <i class="fas fa-times"></i>
 Reject
-</a>
+</button>
+</form>
+
+<?php endif; ?>
+
+<?php if ($claim['status']==='approved'): ?>
+
+<form method="POST" action="process-claim.php" style="display:inline-flex;" onsubmit="return confirm('Mark this claim as collected?');">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$claim['id'] ?>">
+<input type="hidden" name="action" value="collect">
+<button type="submit" class="action-btn approve">
+<i class="fas fa-box-open"></i>
+Mark as Collected
+</button>
+</form>
 
 <?php endif; ?>
 
@@ -141,6 +330,22 @@ Reject
 </div>
 
 <script src="/assets/js/sidebar.js"></script>
+<script>
+document.querySelectorAll('.report-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+        document.querySelectorAll('.report-tab').forEach(function(item){
+            item.classList.remove('active');
+        });
+
+        document.querySelectorAll('.report-tab-panel').forEach(function(panel){
+            panel.classList.remove('active');
+        });
+
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+});
+</script>
 
 </body>
 </html>

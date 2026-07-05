@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
@@ -113,17 +114,23 @@ switch ($match['status']) {
 
 <?php if ($match['status']==='pending'): ?>
 
-<a href="process-match.php?id=<?= $match['id'] ?>&action=approve"
-class="action-btn approve"
-onclick="return confirm('Approve this match?');">
+<form method="POST" action="process-match.php" style="display:inline-flex;" onsubmit="return confirm('Approve this match?');">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$match['id'] ?>">
+<input type="hidden" name="action" value="approve">
+<button type="submit" class="action-btn approve">
 <i class="fas fa-check"></i> Approve
-</a>
+</button>
+</form>
 
-<a href="process-match.php?id=<?= $match['id'] ?>&action=reject"
-class="action-btn delete"
-onclick="return confirm('Reject this match?');">
+<form method="POST" action="process-match.php" style="display:inline-flex;" onsubmit="return confirm('Reject this match?');">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$match['id'] ?>">
+<input type="hidden" name="action" value="reject">
+<button type="submit" class="action-btn delete">
 <i class="fas fa-times"></i> Reject
-</a>
+</button>
+</form>
 
 <?php endif; ?>
 

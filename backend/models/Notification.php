@@ -7,6 +7,7 @@ class Notification {
     public $id;
     public $user_id;
     public $message;
+    public $link;
     public $is_read;
     public $created_at;
 
@@ -16,21 +17,45 @@ class Notification {
 
     // Create a new notification
     public function create() {
-        $query = "INSERT INTO " . $this->table_name . "
-                SET
-                    user_id = :user_id,
-                    message = :message,
-                    is_read = 0";
+        if($this->hasLinkColumn()) {
+            $query = "INSERT INTO " . $this->table_name . "
+                    SET
+                        user_id = :user_id,
+                        message = :message,
+                        link = :link,
+                        is_read = 0";
+        } else {
+            $query = "INSERT INTO " . $this->table_name . "
+                    SET
+                        user_id = :user_id,
+                        message = :message,
+                        is_read = 0";
+        }
 
         $stmt = $this->conn->prepare($query);
 
         $stmt->bindParam(":user_id", $this->user_id);
         $stmt->bindParam(":message", $this->message);
 
+        if($this->hasLinkColumn()) {
+            $stmt->bindParam(":link", $this->link);
+        }
+
         if($stmt->execute()) {
             return true;
         }
         return false;
+    }
+
+    private function hasLinkColumn(): bool {
+        $stmt = $this->conn->prepare(
+            "SHOW COLUMNS
+             FROM " . $this->table_name . "
+             LIKE 'link'"
+        );
+        $stmt->execute();
+
+        return (bool)$stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     // Read notifications for a specific user

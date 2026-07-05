@@ -9,7 +9,7 @@ if(!isset($_SESSION['user_id']))
     exit;
 }
 
-if($_SESSION['role'] !== 'user')
+if(!in_array($_SESSION['role'], ['student', 'staff'], true))
 {
     header("Location: /admin/dashboard.php");
     exit;
@@ -67,9 +67,9 @@ $totalClaims = $stmt->fetchColumn();
 
 $stmt = $conn->prepare(
     "SELECT COUNT(*)
-     FROM lost_items
+     FROM claims
      WHERE user_id = :user_id
-     AND status = 'claimed'"
+     AND status = 'collected'"
 );
 
 $stmt->execute([

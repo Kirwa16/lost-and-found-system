@@ -73,6 +73,9 @@ class AuthController {
             $this->user->fullname = $data->fullname;
             $this->user->email = $data->email;
             $this->user->password = $data->password;
+            $this->user->role = in_array($data->role ?? '', ['student', 'staff'], true)
+                ? $data->role
+                : 'student';
 
             if($this->user->register()) {
                 http_response_code(201);

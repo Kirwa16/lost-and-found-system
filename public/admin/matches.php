@@ -13,9 +13,36 @@ if ($_SESSION['role'] !== 'admin') {
 }
 
 require_once __DIR__ . '/../../backend/controllers/MatchController.php';
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 $controller = new MatchController();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'create_manual_match') {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        header("Location: matches.php?error=" . urlencode("Invalid security token."));
+        exit;
+    }
+
+    $lostItemId = isset($_POST['lost_item_id']) ? (int)$_POST['lost_item_id'] : 0;
+    $foundItemId = isset($_POST['found_item_id']) ? (int)$_POST['found_item_id'] : 0;
+
+    if ($lostItemId <= 0 || $foundItemId <= 0) {
+        header("Location: matches.php?error=" . urlencode("Please select both a lost item and a found item."));
+        exit;
+    }
+
+    if ($controller->create($lostItemId, $foundItemId, 100)) {
+        header("Location: matches.php?success=" . urlencode("Manual match created successfully."));
+        exit;
+    }
+
+    header("Location: matches.php?error=" . urlencode("Unable to create manual match. It may already exist."));
+    exit;
+}
+
 $matches = $controller->index();
+$pendingLostItems = $controller->pendingLostItems();
+$pendingFoundItems = $controller->pendingFoundItems();
 
 ?>
 <!DOCTYPE html>
@@ -57,6 +84,57 @@ $matches = $controller->index();
 <?php if (isset($_GET['error'])): ?>
 <div class="error"><?= htmlspecialchars($_GET['error']) ?></div>
 <?php endif; ?>
+
+<div class="card">
+<h2>Create Manual Match</h2>
+
+<?php if (empty($pendingLostItems) || empty($pendingFoundItems)): ?>
+
+<p>No pending lost and found items are available for manual matching.</p>
+
+<?php else: ?>
+
+<form method="POST" class="manual-match-form">
+<?= csrf_field() ?>
+<input type="hidden" name="action" value="create_manual_match">
+
+<div class="form-grid">
+
+<div class="form-group">
+<label for="lost_item_id">Pending Lost Item</label>
+<select id="lost_item_id" name="lost_item_id" required>
+<option value="">Select lost item</option>
+<?php foreach ($pendingLostItems as $item): ?>
+<option value="<?= (int)$item['id'] ?>">
+<?= htmlspecialchars($item['item_name'] . ' - ' . $item['category'] . ' - ' . $item['location_lost']) ?>
+</option>
+<?php endforeach; ?>
+</select>
+</div>
+
+<div class="form-group">
+<label for="found_item_id">Pending Found Item</label>
+<select id="found_item_id" name="found_item_id" required>
+<option value="">Select found item</option>
+<?php foreach ($pendingFoundItems as $item): ?>
+<option value="<?= (int)$item['id'] ?>">
+<?= htmlspecialchars($item['item_name'] . ' - ' . $item['category'] . ' - ' . $item['location_found']) ?>
+</option>
+<?php endforeach; ?>
+</select>
+</div>
+
+</div>
+
+<button type="submit" class="action-btn approve">
+<i class="fas fa-link"></i>
+Create Match
+</button>
+</form>
+
+<?php endif; ?>
+
+</div>
 
 <div class="card">
 
@@ -136,26 +214,34 @@ if ($score >= 90) {
 <td><?= date('d M Y', strtotime($match['created_at'])) ?></td>
 
 <td>
+<div class="table-actions">
 
-<a href="match-details.php?id=<?= $match['id'] ?>" class="action-btn view">
-<i class="fas fa-eye"></i> View
+<a href="match-details.php?id=<?= $match['id'] ?>" class="action-btn view" title="View Match" aria-label="View Match">
+<i class="fas fa-eye"></i>
 </a>
 
 <?php if ($match['status'] === 'pending'): ?>
 
-<a href="process-match.php?id=<?= $match['id'] ?>&action=approve"
-class="action-btn approve"
-onclick="return confirm('Approve this match?')">
-<i class="fas fa-check"></i> Approve
-</a>
+<form method="POST" action="process-match.php" onsubmit="return confirm('Approve this match?')">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$match['id'] ?>">
+<input type="hidden" name="action" value="approve">
+<button type="submit" class="action-btn approve" title="Approve Match" aria-label="Approve Match">
+<i class="fas fa-check"></i>
+</button>
+</form>
 
-<a href="process-match.php?id=<?= $match['id'] ?>&action=reject"
-class="action-btn delete"
-onclick="return confirm('Reject this match?')">
-<i class="fas fa-times"></i> Reject
-</a>
+<form method="POST" action="process-match.php" onsubmit="return confirm('Reject this match?')">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$match['id'] ?>">
+<input type="hidden" name="action" value="reject">
+<button type="submit" class="action-btn delete" title="Reject Match" aria-label="Reject Match">
+<i class="fas fa-times"></i>
+</button>
+</form>
 
 <?php endif; ?>
+</div>
 
 </td>
 

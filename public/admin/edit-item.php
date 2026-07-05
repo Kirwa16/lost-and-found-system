@@ -16,6 +16,7 @@ if($_SESSION['role'] !== 'admin')
 }
 
 require_once __DIR__ . '/../../backend/config/database.php';
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 if(
     !isset($_GET['id']) ||
@@ -52,6 +53,11 @@ $conn = $db->getConnection();
 
 if($_SERVER['REQUEST_METHOD'] === 'POST')
 {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        header("Location: /admin/items.php?error=invalid_token");
+        exit;
+    }
+
     $stmt = $conn->prepare(
         "UPDATE {$table}
          SET
@@ -137,11 +143,22 @@ if(!$item)
 
         <div class="content">
 
-            <h1>Edit Item</h1>
+            <div class="page-header">
+                <h1>Edit Item</h1>
+
+                <a
+                    href="/admin/items.php"
+                    class="secondary-btn"
+                    title="Back to Items">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Items
+                </a>
+            </div>
 
             <div class="form-card">
 
                 <form method="POST">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
 

@@ -6,6 +6,11 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+if (!in_array($_SESSION['role'], ['student', 'staff'], true)) {
+    header("Location: /admin/dashboard.php");
+    exit;
+}
+
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header("Location: claims.php");
     exit;
@@ -23,6 +28,9 @@ if (!$claim || $claim['user_id'] != $_SESSION['user_id']) {
 
 switch ($claim['status']) {
     case 'approved':
+        $badge = 'badge-success';
+        break;
+    case 'collected':
         $badge = 'badge-success';
         break;
     case 'rejected':
@@ -60,6 +68,15 @@ switch ($claim['status']) {
 <p><?= htmlspecialchars($claim['id']) ?></p>
 </div>
 
+<?php if(($claim['claim_type'] ?? 'match') === 'direct'): ?>
+
+<div class="form-group">
+<label>Claiming</label>
+<p><?= htmlspecialchars($claim['direct_item'] ?? $claim['found_item'] ?? 'Item') ?></p>
+</div>
+
+<?php else: ?>
+
 <div class="form-group">
 <label>Lost Item</label>
 <p><?= htmlspecialchars($claim['lost_item']) ?></p>
@@ -69,6 +86,8 @@ switch ($claim['status']) {
 <label>Found Item</label>
 <p><?= htmlspecialchars($claim['found_item']) ?></p>
 </div>
+
+<?php endif; ?>
 
 <div class="form-group">
 <label>Claim Message</label>

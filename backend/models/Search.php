@@ -34,6 +34,7 @@ class Search
                 'Lost Item' AS item_type
             FROM lost_items
             WHERE 1=1
+            AND status NOT IN ('matched', 'claimed')
         ";
 
         $params = [];
@@ -78,6 +79,7 @@ class Search
                 'Found Item' AS item_type
             FROM found_items
             WHERE 1=1
+            AND status NOT IN ('matched', 'returned')
         ";
 
         if(!empty($keyword))

@@ -28,6 +28,12 @@ if(
 
 $id = (int)$_GET['id'];
 $type = $_GET['type'];
+$backHref = ($_GET['from'] ?? '') === 'dashboard'
+    ? '/admin/dashboard.php'
+    : '/admin/items.php';
+$backLabel = ($_GET['from'] ?? '') === 'dashboard'
+    ? 'Back to Dashboard'
+    : 'Back to Items';
 
 if(!in_array($type, ['lost', 'found']))
 {
@@ -94,7 +100,17 @@ if(!$item)
 
         <div class="content">
 
-            <h1>Item Details</h1>
+            <div class="page-header">
+                <h1>Item Details</h1>
+
+                <a
+                    href="<?= htmlspecialchars($backHref) ?>"
+                    class="secondary-btn"
+                    title="<?= htmlspecialchars($backLabel) ?>">
+                    <i class="fas fa-arrow-left"></i>
+                    <?= htmlspecialchars($backLabel) ?>
+                </a>
+            </div>
 
             <div class="card">
 
@@ -201,10 +217,10 @@ if(!$item)
                 <br>
 
                 <a
-                    href="/admin/items.php"
+                    href="<?= htmlspecialchars($backHref) ?>"
                     class="action-btn">
 
-                    Back to Items
+                    <?= htmlspecialchars($backLabel) ?>
 
                 </a>
 

@@ -13,18 +13,26 @@ if ($_SESSION['role'] !== 'admin') {
 
 require_once __DIR__ . '/../../backend/config/database.php';
 require_once __DIR__ . '/../../backend/models/User.php';
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 $db = new Database();
 $conn = $db->getConnection();
 $userModel = new User($conn);
 
-/* Search */
+/* Users */
 $search = trim($_GET['search'] ?? '');
-$users = $search !== '' ? $userModel->searchUsers($search) : $userModel->getAllUsers();
+$users = $userModel->getAllUsers();
+$totalUsers = count($users);
 
 /* Delete */
-if (isset($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
+if (isset($_POST['delete_user'])) {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Invalid security token.";
+        header("Location: users.php");
+        exit;
+    }
+
+    $id = (int)$_POST['id'];
 
     if ($id == $_SESSION['user_id']) {
         $_SESSION['error'] = "You cannot delete your own account.";
@@ -40,11 +48,20 @@ if (isset($_GET['delete'])) {
 
 /* Update */
 if (isset($_POST['update_user'])) {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Invalid security token.";
+        header("Location: users.php");
+        exit;
+    }
 
     $id = (int)$_POST['id'];
     $fullname = trim($_POST['fullname']);
     $email = trim($_POST['email']);
     $role = $_POST['role'];
+
+    if (!in_array($role, ['admin', 'student', 'staff'], true)) {
+        $role = 'student';
+    }
 
     if ($id == $_SESSION['user_id']) {
         $current = $userModel->getUserById($id);
@@ -99,14 +116,22 @@ if (isset($_POST['update_user'])) {
 <div class="error"><?= htmlspecialchars($_SESSION['error']) ?></div>
 <?php unset($_SESSION['error']); endif; ?>
 
-<div class="toolbar">
-<form class="search-form" method="GET">
-<input type="text" name="search" placeholder="Search users..." value="<?= htmlspecialchars($search) ?>">
-<button class="action-btn"><i class="fas fa-search"></i> Search</button>
-</form>
+<div class="cards users-summary">
+<div class="card metric-card" title="All registered accounts including students, staff, and administrators.">
+<h3>Total Users</h3>
+<p id="totalUsersCount"><?= (int)$totalUsers ?></p>
+</div>
 </div>
 
-<div class="table-card">
+<div class="toolbar">
+<form class="search-form" method="GET" id="userSearchForm">
+<input type="text" name="search" id="userSearchInput" placeholder="Search users..." value="<?= htmlspecialchars($search) ?>" autocomplete="off">
+<button class="action-btn" type="submit" title="Search Users" aria-label="Search Users"><i class="fas fa-search"></i></button>
+</form>
+<span class="search-meta" id="userSearchMeta"><?= (int)$totalUsers ?> users shown</span>
+</div>
+
+<div class="table-card" data-current-user-id="<?= (int)$_SESSION['user_id'] ?>">
 
 <table class="table">
 
@@ -123,34 +148,44 @@ if (isset($_POST['update_user'])) {
 
 <tbody>
 <?php $i=1; foreach($users as $user): ?>
-<tr>
-<td><?= $i++ ?></td>
+<tr class="user-row" data-search="<?= htmlspecialchars(strtolower($user['fullname'] . ' ' . $user['email'] . ' ' . $user['role'])) ?>">
+<td class="user-row-number"><?= $i++ ?></td>
 <td><?= htmlspecialchars($user['fullname']) ?></td>
 <td><?= htmlspecialchars($user['email']) ?></td>
 <td><?= ucfirst($user['role']) ?></td>
 <td><?= date('d M Y',strtotime($user['created_at'])) ?></td>
 <td>
 
-<div class="actions">
+<div class="table-actions">
 <a href="#" class="action-btn editUser"
 data-id="<?= $user['id'] ?>"
 data-fullname="<?= htmlspecialchars($user['fullname']) ?>"
 data-email="<?= htmlspecialchars($user['email']) ?>"
-data-role="<?= $user['role'] ?>">
-<i class="fas fa-edit"></i> Edit
+data-role="<?= $user['role'] ?>"
+title="Edit User"
+aria-label="Edit User">
+<i class="fas fa-edit"></i>
 </a>
 
 <?php if($user['id'] != $_SESSION['user_id']): ?>
-<a class="action-btn delete-btn"
-onclick="return confirm('Delete this user?')"
-href="users.php?delete=<?= $user['id'] ?>">
-<i class="fas fa-trash"></i> Delete
-</a>
+<form method="POST" onsubmit="return confirm('Delete this user?')">
+<?= csrf_field() ?>
+<input type="hidden" name="id" value="<?= (int)$user['id'] ?>">
+<button class="action-btn delete-btn"
+name="delete_user"
+title="Delete User"
+aria-label="Delete User">
+<i class="fas fa-trash"></i>
+</button>
+</form>
 <?php endif; ?>
 </div>
 </td>
 </tr>
 <?php endforeach; ?>
+<tr id="noUsersRow" style="display:none;">
+<td colspan="6">No users match your search.</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -164,6 +199,7 @@ href="users.php?delete=<?= $user['id'] ?>">
 <h2>Edit User</h2>
 
 <form method="POST">
+<?= csrf_field() ?>
 
 <input type="hidden" name="id" id="id">
 
@@ -180,7 +216,8 @@ href="users.php?delete=<?= $user['id'] ?>">
 <div class="form-group">
 <label>Role</label>
 <select id="role" name="role">
-<option value="user">User</option>
+<option value="student">Student</option>
+<option value="staff">Staff</option>
 <option value="admin">Administrator</option>
 </select>
 </div>

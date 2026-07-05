@@ -76,9 +76,18 @@ body{
     padding:40px;
 
     border-radius:20px;
+    border:1px solid transparent;
 
     box-shadow:
     0 10px 30px rgba(0,0,0,.08);
+
+    transition:transform .2s ease, box-shadow .2s ease;
+}
+
+.auth-card:hover{
+    transform:translateY(-3px);
+    background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);
+    box-shadow:0 14px 34px rgba(37,99,235,.16);
 }
 
 .auth-card h2{
@@ -100,7 +109,8 @@ body{
     margin-bottom:20px;
 }
 
-.form-group input{
+.form-group input,
+.form-group select{
     width:100%;
 
     padding:15px;
@@ -114,7 +124,8 @@ body{
     transition:.3s;
 }
 
-.form-group input:focus{
+.form-group input:focus,
+.form-group select:focus{
     outline:none;
     border-color:#475569;
     box-shadow:
@@ -179,6 +190,7 @@ body{
     padding:12px;
     border-radius:10px;
     margin-bottom:20px;
+    animation:flashAutoHide .35s ease 4.5s forwards;
 }
 
 .success{
@@ -187,6 +199,15 @@ body{
     padding:12px;
     border-radius:10px;
     margin-bottom:20px;
+    animation:flashAutoHide .35s ease 4.5s forwards;
+}
+
+@keyframes flashAutoHide{
+    to{
+        opacity:0;
+        transform:translateY(-6px);
+        visibility:hidden;
+    }
 }
 
 /* ==================================

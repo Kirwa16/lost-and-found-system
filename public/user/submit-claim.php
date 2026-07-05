@@ -8,89 +8,157 @@ if(!isset($_SESSION['user_id']))
     exit;
 }
 
-if($_SESSION['role'] !== 'user')
+if(!in_array($_SESSION['role'], ['student', 'staff'], true))
 {
     header("Location: /admin/dashboard.php");
     exit;
 }
 
 require_once __DIR__ . '/../../backend/config/database.php';
-
-if(!isset($_GET['match_id']))
-{
-    header("Location: /user/matches.php");
-    exit;
-}
-
-$matchId = (int)$_GET['match_id'];
+require_once __DIR__ . '/../../backend/models/Claim.php';
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 $db = new Database();
 $conn = $db->getConnection();
+$claimModel = new Claim($conn);
 
-/*
-|--------------------------------------------------------------------------
-| Get Match Information
-|--------------------------------------------------------------------------
-*/
+$claimMode = null;
+$match = null;
+$item = null;
+$matchId = null;
+$itemId = null;
+$itemType = null;
 
-$stmt = $conn->prepare(
-    "SELECT
-        m.id,
-        m.confidence_score,
-
-        l.item_name AS lost_item,
-        l.category,
-
-        f.item_name AS found_item
-
-     FROM matches m
-
-     INNER JOIN lost_items l
-        ON l.id = m.lost_item_id
-
-     INNER JOIN found_items f
-        ON f.id = m.found_item_id
-
-     WHERE m.id = :match_id
-     AND l.user_id = :user_id"
-);
-
-$stmt->execute([
-    ':match_id' => $matchId,
-    ':user_id' => $_SESSION['user_id']
-]);
-
-$match = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if(!$match)
+if(isset($_GET['match_id']) && is_numeric($_GET['match_id']))
 {
-    die("Match not found.");
+    $claimMode = 'match';
+    $matchId = (int)$_GET['match_id'];
+
+    $stmt = $conn->prepare(
+        "SELECT
+            m.id,
+            m.confidence_score,
+
+            l.item_name AS lost_item,
+            l.category,
+
+            f.item_name AS found_item
+
+         FROM matches m
+
+         INNER JOIN lost_items l
+            ON l.id = m.lost_item_id
+
+         INNER JOIN found_items f
+            ON f.id = m.found_item_id
+
+         WHERE m.id = :match_id
+         AND l.user_id = :user_id"
+    );
+
+    $stmt->execute([
+        ':match_id' => $matchId,
+        ':user_id' => $_SESSION['user_id']
+    ]);
+
+    $match = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if(!$match)
+    {
+        die("Match not found.");
+    }
+
+    $check = $conn->prepare(
+        "SELECT id
+         FROM claims
+         WHERE user_id = :user_id
+         AND match_id = :match_id
+         AND status IN ('pending', 'approved', 'collected')"
+    );
+
+    $check->execute([
+        ':user_id' => $_SESSION['user_id'],
+        ':match_id' => $matchId
+    ]);
+
+    if($check->fetch())
+    {
+        $_SESSION['error'] =
+            "You have already submitted a claim for this match.";
+
+        header("Location: /user/claims.php");
+        exit;
+    }
 }
-
-/*
-|--------------------------------------------------------------------------
-| Prevent Duplicate Claims
-|--------------------------------------------------------------------------
-*/
-
-$check = $conn->prepare(
-    "SELECT id
-     FROM claims
-     WHERE user_id = :user_id
-     AND match_id = :match_id"
-);
-
-$check->execute([
-    ':user_id' => $_SESSION['user_id'],
-    ':match_id' => $matchId
-]);
-
-if($check->fetch())
+elseif(isset($_GET['item_id'], $_GET['item_type']) && is_numeric($_GET['item_id']))
 {
-    $_SESSION['error'] =
-        "You have already submitted a claim for this match.";
+    $claimMode = 'item';
+    $itemId = (int)$_GET['item_id'];
+    $itemType = $_GET['item_type'];
 
-    header("Location: /user/claims.php");
+    if($itemType !== 'found')
+    {
+        header("Location: /user/search.php");
+        exit;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT *
+         FROM found_items
+         WHERE id = :item_id
+         LIMIT 1"
+    );
+
+    $stmt->execute([
+        ':item_id' => $itemId
+    ]);
+
+    $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if(!$item)
+    {
+        die("Item not found.");
+    }
+
+    if((int)$item['user_id'] === (int)$_SESSION['user_id'])
+    {
+        $_SESSION['error'] = "You cannot claim an item you reported.";
+        header("Location: /user/search.php");
+        exit;
+    }
+
+    if(!in_array($item['status'], ['available', 'pending'], true))
+    {
+        $_SESSION['error'] = "This item is not available for claim.";
+        header("Location: /user/search.php");
+        exit;
+    }
+
+    $check = $conn->prepare(
+        "SELECT id
+         FROM claims
+         WHERE user_id = :user_id
+         AND item_id = :item_id
+         AND status IN ('pending', 'approved', 'collected')"
+    );
+
+    $check->execute([
+        ':user_id' => $_SESSION['user_id'],
+        ':item_id' => $itemId
+    ]);
+
+    if($check->fetch())
+    {
+        $_SESSION['error'] =
+            "You have already submitted a claim for this item.";
+
+        header("Location: /user/claims.php");
+        exit;
+    }
+}
+else
+{
+    header("Location: /user/search.php");
     exit;
 }
 
@@ -102,30 +170,31 @@ if($check->fetch())
 
 if($_SERVER['REQUEST_METHOD'] === 'POST')
 {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Security token expired. Please try again.";
+        header("Location: /user/claims.php");
+        exit;
+    }
+
     $claimMessage = trim($_POST['claim_message']);
 
-    $stmt = $conn->prepare(
-        "INSERT INTO claims
-        (
-            user_id,
-            match_id,
-            claim_message,
-            status
-        )
-        VALUES
-        (
-            :user_id,
-            :match_id,
-            :claim_message,
-            'pending'
-        )"
-    );
+    $claimData = [
+        'user_id' => $_SESSION['user_id'],
+        'claim_message' => $claimMessage
+    ];
 
-    $stmt->execute([
-        ':user_id'       => $_SESSION['user_id'],
-        ':match_id'      => $matchId,
-        ':claim_message' => $claimMessage
-    ]);
+    if($claimMode === 'match') {
+        $claimData['match_id'] = $matchId;
+    } else {
+        $claimData['item_id'] = $itemId;
+        $claimData['item_type'] = $itemType;
+    }
+
+    if(!$claimModel->create($claimData)) {
+        $_SESSION['error'] = "Unable to submit claim.";
+        header("Location: /user/claims.php");
+        exit;
+    }
 
     $_SESSION['success'] =
         "Claim submitted successfully.";
@@ -171,31 +240,63 @@ if($_SERVER['REQUEST_METHOD'] === 'POST')
 
             <div class="card">
 
-                <p>
-                    <strong>Lost Item:</strong>
-                    <?= htmlspecialchars($match['lost_item']) ?>
-                </p>
+                <?php if($claimMode === 'match'): ?>
 
-                <br>
+                    <p>
+                        <strong>Lost Item:</strong>
+                        <?= htmlspecialchars($match['lost_item']) ?>
+                    </p>
 
-                <p>
-                    <strong>Found Item:</strong>
-                    <?= htmlspecialchars($match['found_item']) ?>
-                </p>
+                    <br>
 
-                <br>
+                    <p>
+                        <strong>Found Item:</strong>
+                        <?= htmlspecialchars($match['found_item']) ?>
+                    </p>
 
-                <p>
-                    <strong>Category:</strong>
-                    <?= htmlspecialchars($match['category']) ?>
-                </p>
+                    <br>
 
-                <br>
+                    <p>
+                        <strong>Category:</strong>
+                        <?= htmlspecialchars($match['category']) ?>
+                    </p>
 
-                <p>
-                    <strong>Confidence:</strong>
-                    <?= $match['confidence_score'] ?>%
-                </p>
+                    <br>
+
+                    <p>
+                        <strong>Confidence:</strong>
+                        <?= $match['confidence_score'] ?>%
+                    </p>
+
+                <?php else: ?>
+
+                    <p>
+                        <strong>Claiming:</strong>
+                        <?= htmlspecialchars($item['item_name']) ?>
+                    </p>
+
+                    <br>
+
+                    <p>
+                        <strong>Category:</strong>
+                        <?= htmlspecialchars($item['category']) ?>
+                    </p>
+
+                    <br>
+
+                    <p>
+                        <strong>Location Found:</strong>
+                        <?= htmlspecialchars($item['location_found']) ?>
+                    </p>
+
+                    <br>
+
+                    <p>
+                        <strong>Date Found:</strong>
+                        <?= htmlspecialchars($item['date_found']) ?>
+                    </p>
+
+                <?php endif; ?>
 
             </div>
 
@@ -204,6 +305,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST')
             <div class="form-card">
 
                 <form method="POST">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
 

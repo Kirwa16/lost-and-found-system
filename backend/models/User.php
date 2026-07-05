@@ -28,10 +28,14 @@ class User
             return false;
         }
 
+        $role = in_array($this->role, ['student', 'staff'], true)
+            ? $this->role
+            : 'student';
+
         $query = "INSERT INTO {$this->table_name}
                   (fullname, email, password, role)
                   VALUES
-                  (:fullname, :email, :password, 'user')";
+                  (:fullname, :email, :password, :role)";
 
         $stmt = $this->conn->prepare($query);
 
@@ -40,6 +44,7 @@ class User
         $stmt->bindParam(':fullname', $this->fullname);
         $stmt->bindParam(':email', $this->email);
         $stmt->bindParam(':password', $hashedPassword);
+        $stmt->bindParam(':role', $role);
 
         return $stmt->execute();
     }
@@ -228,6 +233,10 @@ class User
     */
     public function updateUser($id, $fullname, $email, $role)
     {
+        $role = in_array($role, ['admin', 'student', 'staff'], true)
+            ? $role
+            : 'student';
+
         $query = "SELECT id
                   FROM {$this->table_name}
                   WHERE email = :email
@@ -266,6 +275,10 @@ class User
     */
     public function updateRole($id, $role)
     {
+        $role = in_array($role, ['admin', 'student', 'staff'], true)
+            ? $role
+            : 'student';
+
         $query = "UPDATE {$this->table_name}
                   SET role = :role
                   WHERE id = :id";

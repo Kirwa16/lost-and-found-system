@@ -11,6 +11,32 @@
 
     <?php
         $currentPage = basename($_SERVER['PHP_SELF']);
+        $pendingMatches = 0;
+        $pendingClaims = 0;
+
+        if(isset($_SESSION['user_id']))
+        {
+            require_once __DIR__ . '/../../backend/config/database.php';
+
+            $__sidebarDatabase = new Database();
+            $__sidebarConn = $__sidebarDatabase->getConnection();
+
+            $__sidebarStmt = $__sidebarConn->prepare(
+                "SELECT COUNT(*)
+                 FROM matches
+                 WHERE status = 'pending'"
+            );
+            $__sidebarStmt->execute();
+            $pendingMatches = (int)$__sidebarStmt->fetchColumn();
+
+            $__sidebarStmt = $__sidebarConn->prepare(
+                "SELECT COUNT(*)
+                 FROM claims
+                 WHERE status = 'pending'"
+            );
+            $__sidebarStmt->execute();
+            $pendingClaims = (int)$__sidebarStmt->fetchColumn();
+        }
     ?>
 
     <ul class="menu">
@@ -47,6 +73,11 @@
             <a href="/admin/matches.php">
                 <i class="fas fa-handshake"></i>
                 <span>Matches</span>
+                <?php if($pendingMatches > 0): ?>
+                    <strong class="notification-count">
+                        <?= $pendingMatches > 99 ? '99+' : $pendingMatches ?>
+                    </strong>
+                <?php endif; ?>
             </a>
         </li>
 
@@ -54,6 +85,11 @@
             <a href="/admin/claims.php">
                 <i class="fas fa-clipboard-check"></i>
                 <span>Claims</span>
+                <?php if($pendingClaims > 0): ?>
+                    <strong class="notification-count">
+                        <?= $pendingClaims > 99 ? '99+' : $pendingClaims ?>
+                    </strong>
+                <?php endif; ?>
             </a>
         </li>
 

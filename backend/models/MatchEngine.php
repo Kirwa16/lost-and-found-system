@@ -115,15 +115,60 @@ class MatchEngine
                             )"
                         );
 
-                        $stmt->execute([
-                            ':lost' => $lost['id'],
-                            ':found' => $found['id'],
-                            ':score' => $score
-                        ]);
-                    }
-                }
-            }
+	                        $stmt->execute([
+	                            ':lost' => $lost['id'],
+	                            ':found' => $found['id'],
+	                            ':score' => $score
+	                        ]);
+
+	                        $this->notifyMatchOwner(
+	                            (int)$lost['user_id'],
+	                            $lost['item_name'],
+	                            $found['item_name']
+	                        );
+	                    }
+	                }
+	            }
+	        }
+	    }
+
+    private function notifyMatchOwner(int $userId, string $lostItem, string $foundItem): void
+    {
+        $params = [
+            ':user_id' => $userId,
+            ':message' => "A possible match was found for " . $lostItem . ": " . $foundItem . "."
+        ];
+
+        if($this->notificationSupportsLinks()) {
+            $stmt = $this->conn->prepare(
+                "INSERT INTO notifications
+                 (user_id, message, link, is_read)
+                 VALUES
+                 (:user_id, :message, :link, 0)"
+            );
+            $params[':link'] = '/user/matches.php';
+        } else {
+            $stmt = $this->conn->prepare(
+                "INSERT INTO notifications
+                 (user_id, message, is_read)
+                 VALUES
+                 (:user_id, :message, 0)"
+            );
         }
+
+        $stmt->execute($params);
+    }
+
+    private function notificationSupportsLinks(): bool
+    {
+        $stmt = $this->conn->prepare(
+            "SHOW COLUMNS
+             FROM notifications
+             LIKE 'link'"
+        );
+        $stmt->execute();
+
+        return (bool)$stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /*

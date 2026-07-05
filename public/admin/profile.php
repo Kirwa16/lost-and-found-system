@@ -14,6 +14,7 @@ if ($_SESSION['role'] !== 'admin') {
 
 require_once __DIR__ . '/../../backend/config/database.php';
 require_once __DIR__ . '/../../backend/models/User.php';
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 $db = new Database();
 $conn = $db->getConnection();
@@ -35,6 +36,11 @@ if (!$admin) {
 */
 
 if (isset($_POST['update_profile'])) {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Security token expired. Please try again.";
+        header("Location: profile.php");
+        exit;
+    }
 
     $fullname = trim($_POST['fullname']);
     $email = trim($_POST['email']);
@@ -79,6 +85,11 @@ if (isset($_POST['update_profile'])) {
 */
 
 if (isset($_POST['change_password'])) {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Security token expired. Please try again.";
+        header("Location: profile.php");
+        exit;
+    }
 
     $currentPassword = $_POST['current_password'];
     $newPassword = $_POST['new_password'];
@@ -191,6 +202,7 @@ if (isset($_POST['change_password'])) {
                 </p>
 
                 <form method="POST">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
 
@@ -298,6 +310,7 @@ if (isset($_POST['change_password'])) {
                 </p>
 
                 <form method="POST">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
 

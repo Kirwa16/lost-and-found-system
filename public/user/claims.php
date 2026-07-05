@@ -8,6 +8,12 @@ if (!isset($_SESSION['user_id']))
     exit;
 }
 
+if (!in_array($_SESSION['role'], ['student', 'staff'], true))
+{
+    header("Location: /admin/dashboard.php");
+    exit;
+}
+
 require_once __DIR__ . '/../../backend/controllers/ClaimController.php';
 
 $controller = new ClaimController();
@@ -50,11 +56,35 @@ $claims = $controller->userClaims($_SESSION['user_id']);
 
             <h1>My Claims</h1>
 
+            <?php if(isset($_SESSION['success'])): ?>
+
+                <div class="success">
+                    <?= htmlspecialchars($_SESSION['success']) ?>
+                </div>
+
+                <?php unset($_SESSION['success']); ?>
+
+            <?php endif; ?>
+
+            <?php if(isset($_SESSION['error'])): ?>
+
+                <div class="error">
+                    <?= htmlspecialchars($_SESSION['error']) ?>
+                </div>
+
+                <?php unset($_SESSION['error']); ?>
+
+            <?php endif; ?>
+
             <div class="card">
 
                 <?php if(empty($claims)): ?>
 
-                    <p>No claims submitted yet.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h2>No Active Claims</h2>
+                        <p>You have not submitted any claims yet. Search found items or review your matches to submit a claim.</p>
+                    </div>
 
                 <?php else: ?>
 
@@ -65,8 +95,7 @@ $claims = $controller->userClaims($_SESSION['user_id']);
                         <tr>
 
                             <th>Claim No.</th>
-                            <th>Lost Item</th>
-                            <th>Found Item</th>
+                            <th>Claim</th>
                             <th>Status</th>
                             <th>Date Submitted</th>
                             <th>Action</th>
@@ -88,6 +117,10 @@ switch ($claim['status']) {
         $badge = 'badge-success';
         break;
 
+    case 'collected':
+        $badge = 'badge-success';
+        break;
+
     case 'rejected':
         $badge = 'badge-danger';
         break;
@@ -104,9 +137,14 @@ switch ($claim['status']) {
 
     <td><?= $count++; ?></td>
 
-    <td><?= htmlspecialchars($claim['lost_item']); ?></td>
-
-    <td><?= htmlspecialchars($claim['found_item']); ?></td>
+    <td>
+        <?php if(($claim['claim_type'] ?? 'match') === 'direct'): ?>
+            Claiming: <?= htmlspecialchars($claim['direct_item'] ?? $claim['found_item'] ?? 'Item') ?>
+        <?php else: ?>
+            Lost: <?= htmlspecialchars($claim['lost_item']); ?> /
+            Found: <?= htmlspecialchars($claim['found_item']); ?>
+        <?php endif; ?>
+    </td>
 
     <td>
         <span class="badge <?= $badge ?>">
@@ -119,16 +157,18 @@ switch ($claim['status']) {
     </td>
 
     <td>
+        <div class="table-actions">
 
         <a
             href="claim-details.php?id=<?= $claim['id'] ?>"
-            class="action-btn view">
+            class="action-btn view"
+            title="View Claim"
+            aria-label="View Claim">
 
             <i class="fas fa-eye"></i>
 
-            View
-
         </a>
+        </div>
 
     </td>
 

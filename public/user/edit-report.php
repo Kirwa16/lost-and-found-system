@@ -1,6 +1,7 @@
 <?php
 
 session_start();
+require_once __DIR__ . '/../../backend/helpers/csrf.php';
 
 if(!isset($_SESSION['user_id']))
 {
@@ -8,7 +9,7 @@ if(!isset($_SESSION['user_id']))
     exit;
 }
 
-if($_SESSION['role'] !== 'user')
+if(!in_array($_SESSION['role'], ['student', 'staff'], true))
 {
     header("Location: /admin/dashboard.php");
     exit;
@@ -28,20 +29,41 @@ if(!isset($_GET['id']))
 }
 
 $id = (int)$_GET['id'];
+$type = $_GET['type'] ?? 'lost';
+
+if(!in_array($type, ['lost', 'found']))
+{
+    header("Location: /user/my-reports.php");
+    exit;
+}
+
+$table = ($type === 'lost') ? 'lost_items' : 'found_items';
+$locationColumn = ($type === 'lost') ? 'location_lost' : 'location_found';
+$dateColumn = ($type === 'lost') ? 'date_lost' : 'date_found';
+$locationLabel = ($type === 'lost') ? 'Location Lost' : 'Location Found';
+$dateLabel = ($type === 'lost') ? 'Date Lost' : 'Date Found';
+$tab = ($_GET['tab'] ?? $type) === 'found' ? 'found' : 'lost';
+$reportsUrl = "/user/my-reports.php?tab=" . $tab;
 
 $db = new Database();
 $conn = $db->getConnection();
 
 if($_SERVER['REQUEST_METHOD'] === 'POST')
 {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Security token expired. Please try again.";
+        header("Location: " . $reportsUrl);
+        exit;
+    }
+
     $stmt = $conn->prepare(
-        "UPDATE lost_items
+        "UPDATE {$table}
          SET
             item_name = :item_name,
             category = :category,
             description = :description,
-            location_lost = :location_lost,
-            date_lost = :date_lost
+            {$locationColumn} = :location,
+            {$dateColumn} = :report_date
          WHERE id = :id
          AND user_id = :user_id"
     );
@@ -50,21 +72,21 @@ if($_SERVER['REQUEST_METHOD'] === 'POST')
         ':item_name' => $_POST['item_name'],
         ':category' => $_POST['category'],
         ':description' => $_POST['description'],
-        ':location_lost' => $_POST['location_lost'],
-        ':date_lost' => $_POST['date_lost'],
+        ':location' => $_POST['location'],
+        ':report_date' => $_POST['report_date'],
         ':id' => $id,
         ':user_id' => $_SESSION['user_id']
     ]);
 
     $_SESSION['success'] = "Report updated successfully.";
 
-    header("Location: /user/my-reports.php");
+    header("Location: " . $reportsUrl);
     exit;
 }
 
 $stmt = $conn->prepare(
     "SELECT *
-     FROM lost_items
+     FROM {$table}
      WHERE id = :id
      AND user_id = :user_id"
 );
@@ -112,11 +134,22 @@ if(!$report)
 
         <div class="content">
 
-            <h1>Edit Report</h1>
+            <div class="page-header">
+                <h1>Edit <?= ucfirst($type) ?> Report</h1>
+
+                <a
+                    href="<?= htmlspecialchars($reportsUrl) ?>"
+                    class="secondary-btn"
+                    title="Back to Reports">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Reports
+                </a>
+            </div>
 
             <div class="form-card">
 
                 <form method="POST">
+                    <?= csrf_field() ?>
 
                     <div class="form-group">
                         <label>Item Name</label>
@@ -145,20 +178,20 @@ if(!$report)
                     </div>
 
                     <div class="form-group">
-                        <label>Location Lost</label>
+                        <label><?= $locationLabel ?></label>
                         <input
                             type="text"
-                            name="location_lost"
-                            value="<?= htmlspecialchars($report['location_lost']) ?>"
+                            name="location"
+                            value="<?= htmlspecialchars($report[$locationColumn]) ?>"
                             required>
                     </div>
 
                     <div class="form-group">
-                        <label>Date Lost</label>
+                        <label><?= $dateLabel ?></label>
                         <input
                             type="date"
-                            name="date_lost"
-                            value="<?= $report['date_lost'] ?>"
+                            name="report_date"
+                            value="<?= htmlspecialchars($report[$dateColumn]) ?>"
                             required>
                     </div>
 

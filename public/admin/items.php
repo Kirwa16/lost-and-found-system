@@ -22,46 +22,98 @@ $conn = $db->getConnection();
 $search = trim($_GET['search'] ?? '');
 $type = $_GET['type'] ?? 'all';
 $status = $_GET['status'] ?? 'all';
+$category = trim($_GET['category'] ?? 'all');
 $sort = $_GET['sort'] ?? 'desc';
 
 $order = $sort === 'asc' ? 'ASC' : 'DESC';
+$params = [];
 
-$sql = "
-SELECT
-    li.id,
-    'Lost' AS item_type,
-    li.item_name,
-    li.category,
-    li.status,
-    li.created_at,
-    u.fullname
-FROM lost_items li
-JOIN users u ON li.user_id=u.id
-
-UNION ALL
-
-SELECT
-    fi.id,
-    'Found' AS item_type,
-    fi.item_name,
-    fi.category,
-    fi.status,
-    fi.created_at,
-    u.fullname
-FROM found_items fi
-JOIN users u ON fi.user_id=u.id
-";
-
-$items = $conn->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+$where = [];
 
 if ($search !== '') {
-    $items = array_filter($items, fn($i)=>stripos($i['item_name'],$search)!==false);
+    $where[] = "item_name LIKE :search";
+    $params[':search'] = "%{$search}%";
 }
+
 if ($type !== 'all') {
-    $items = array_filter($items, fn($i)=>strtolower($i['item_type'])==$type);
+    $where[] = "LOWER(item_type) = :type";
+    $params[':type'] = strtolower($type);
 }
+
 if ($status !== 'all') {
-    $items = array_filter($items, fn($i)=>$i['status']==$status);
+    $where[] = "status = :status";
+    $params[':status'] = $status;
+}
+
+if ($category !== 'all') {
+    $where[] = "category = :category";
+    $params[':category'] = $category;
+}
+
+$baseSql = "
+SELECT *
+FROM (
+    SELECT
+        li.id,
+        'Lost' AS item_type,
+        li.item_name,
+        li.category,
+        li.status,
+        li.created_at,
+        u.fullname
+    FROM lost_items li
+    JOIN users u ON li.user_id = u.id
+
+    UNION ALL
+
+    SELECT
+        fi.id,
+        'Found' AS item_type,
+        fi.item_name,
+        fi.category,
+        fi.status,
+        fi.created_at,
+        u.fullname
+    FROM found_items fi
+    JOIN users u ON fi.user_id = u.id
+) all_items";
+
+$sql = $baseSql
+    . (!empty($where) ? " WHERE " . implode(" AND ", $where) : "")
+    . " ORDER BY created_at {$order}";
+
+$stmt = $conn->prepare($sql);
+$stmt->execute($params);
+$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$categoryRows = $conn->query(
+    "SELECT category FROM lost_items
+     UNION
+     SELECT category FROM found_items
+     ORDER BY category ASC"
+)->fetchAll(PDO::FETCH_COLUMN);
+
+if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="items-export-' . date('Y-m-d') . '.csv"');
+
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['ID', 'Type', 'Item Name', 'Category', 'Reported By', 'Status', 'Date Reported']);
+
+    foreach ($items as $item) {
+        fputcsv($output, [
+            $item['id'],
+            $item['item_type'],
+            $item['item_name'],
+            $item['category'],
+            $item['fullname'],
+            $item['status'],
+            $item['created_at']
+        ]);
+    }
+
+    fclose($output);
+    exit;
 }
 
 $total=count($items);
@@ -97,6 +149,13 @@ $found=count(array_filter($items,fn($i)=>$i['item_type']=="Found"));
 
 <h1>Manage Items</h1>
 
+<div class="page-actions">
+<a class="secondary-btn" href="items.php?<?= htmlspecialchars(http_build_query(array_merge($_GET, ['export' => 'csv']))) ?>">
+<i class="fas fa-file-csv"></i>
+Export CSV
+</a>
+</div>
+
 <div class="stats-grid">
 <div class="stat-card"><h3>Total</h3><p><?= $total ?></p></div>
 <div class="stat-card"><h3>Lost</h3><p><?= $lost ?></p></div>
@@ -107,6 +166,15 @@ $found=count(array_filter($items,fn($i)=>$i['item_type']=="Found"));
 
 <input type="text" name="search" placeholder="Search item..." value="<?= htmlspecialchars($search) ?>">
 
+<select name="category">
+<option value="all">All Categories</option>
+<?php foreach($categoryRows as $categoryOption): ?>
+<option value="<?= htmlspecialchars($categoryOption) ?>" <?= $category === $categoryOption ? 'selected' : '' ?>>
+<?= htmlspecialchars($categoryOption) ?>
+</option>
+<?php endforeach; ?>
+</select>
+
 <select name="type">
 <option value="all">All Types</option>
 <option value="lost" <?= $type=='lost'?'selected':'' ?>>Lost</option>
@@ -115,17 +183,18 @@ $found=count(array_filter($items,fn($i)=>$i['item_type']=="Found"));
 
 <select name="status">
 <option value="all">All Status</option>
-<option value="pending">Pending</option>
-<option value="matched">Matched</option>
-<option value="claimed">Claimed</option>
+<option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>Pending</option>
+<option value="matched" <?= $status === 'matched' ? 'selected' : '' ?>>Matched</option>
+<option value="claimed" <?= $status === 'claimed' ? 'selected' : '' ?>>Claimed</option>
+<option value="returned" <?= $status === 'returned' ? 'selected' : '' ?>>Returned</option>
 </select>
 
 <select name="sort">
-<option value="desc">Newest</option>
-<option value="asc">Oldest</option>
+<option value="desc" <?= $sort === 'desc' ? 'selected' : '' ?>>Newest</option>
+<option value="asc" <?= $sort === 'asc' ? 'selected' : '' ?>>Oldest</option>
 </select>
 
-<button class="action-btn">Apply</button>
+<button class="action-btn" type="submit">Apply</button>
 
 </form>
 
@@ -171,25 +240,29 @@ $found=count(array_filter($items,fn($i)=>$i['item_type']=="Found"));
 <td><?= date('d M Y',strtotime($item['created_at'])) ?></td>
 
 <td>
+<div class="table-actions">
 
 <a class="action-btn view-btn"
-href="view-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>">
+href="view-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>"
+title="View Item"
+aria-label="View Item">
   <i class="fas fa-eye"></i>
-View
 </a>
 
 <a class="action-btn edit-btn"
-href="edit-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>">
+href="edit-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>"
+title="Edit Item"
+aria-label="Edit Item">
   <i class="fas fa-edit"></i>
-Edit
 </a>
 
 <a class="action-btn delete-btn"
-onclick="return confirm('Delete this item?')"
-href="delete-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>">
+href="delete-item.php?type=<?= strtolower($item['item_type']) ?>&id=<?= $item['id'] ?>"
+title="Delete Item"
+aria-label="Delete Item">
   <i class="fas fa-trash"></i>
-Delete
 </a>
+</div>
 
 </td>
 

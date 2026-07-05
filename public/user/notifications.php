@@ -8,7 +8,7 @@ if(!isset($_SESSION['user_id']))
     exit;
 }
 
-if($_SESSION['role'] !== 'user')
+if(!in_array($_SESSION['role'], ['student', 'staff'], true))
 {
     header("Location: /admin/dashboard.php");
     exit;
@@ -19,25 +19,29 @@ require_once __DIR__ . '/../../backend/config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
+$stmt = $conn->prepare(
+    "SHOW COLUMNS
+     FROM notifications
+     LIKE 'link'"
+);
+$stmt->execute();
+$hasNotificationLinkColumn = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+
 /*
 |--------------------------------------------------------------------------
-| Mark Notification As Read
+| Mark All Notifications As Read
 |--------------------------------------------------------------------------
 */
 
-if(isset($_GET['read']))
+if(isset($_GET['mark_all']))
 {
-    $notificationId = (int)$_GET['read'];
-
     $stmt = $conn->prepare(
         "UPDATE notifications
          SET is_read = 1
-         WHERE id = :id
-         AND user_id = :user_id"
+         WHERE user_id = :user_id"
     );
 
     $stmt->execute([
-        ':id' => $notificationId,
         ':user_id' => $_SESSION['user_id']
     ]);
 
@@ -51,8 +55,12 @@ if(isset($_GET['read']))
 |--------------------------------------------------------------------------
 */
 
+$linkSelect = $hasNotificationLinkColumn
+    ? 'link'
+    : "NULL AS link";
+
 $stmt = $conn->prepare(
-    "SELECT *
+    "SELECT id, user_id, message, {$linkSelect}, is_read, created_at
      FROM notifications
      WHERE user_id = :user_id
      ORDER BY created_at DESC"
@@ -101,33 +109,45 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <?php if(empty($notifications)): ?>
 
-                <div class="card">
-
-                    <p>No notifications available.</p>
+                <div class="card empty-state">
+                    <i class="fas fa-bell-slash"></i>
+                    <h2>No Notifications</h2>
+                    <p>You are all caught up. Claim updates and match alerts will appear here.</p>
 
                 </div>
 
             <?php else: ?>
 
-                <?php $count = 1; ?>
+                <div class="page-actions">
+                    <a href="/user/notifications.php?mark_all=1" class="secondary-btn">
+                        <i class="fas fa-check-double"></i>
+                        Mark All as Read
+                    </a>
+                </div>
+
+                <?php $count = count($notifications); ?>
 
                 <?php foreach($notifications as $notification): ?>
 
-                    <div
-                        class="card"
-                        style="
-                            margin-bottom:15px;
-                            border-left:
-                            <?= $notification['is_read']
-                                ? '5px solid #ccc'
-                                : '5px solid #8B0000'
-                            ?>;
-                        "
+                    <?php
+                        $link = $notification['link'] ?: '/user/notifications.php';
+                        if(strpos($link, '/') !== 0 || strpos($link, '//') === 0) {
+                            $link = '/user/notifications.php';
+                        }
+                    ?>
+
+                    <a
+                        href="/user/open-notification.php?id=<?= (int)$notification['id'] ?>"
+                        class="card notification-card notification-link <?= $notification['is_read'] ? 'is-read' : 'is-unread' ?>"
                     >
 
                         <h3>
 
-                            Notification <?= $count++ ?>
+                            <?php if(!$notification['is_read']): ?>
+                                <span class="unread-dot" aria-hidden="true"></span>
+                            <?php endif; ?>
+
+                            Notification <?= $count-- ?>
 
                             <?php if(!$notification['is_read']): ?>
 
@@ -139,8 +159,6 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         </h3>
 
-                        <br>
-
                         <p>
 
                             <?= htmlspecialchars(
@@ -148,8 +166,6 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             ) ?>
 
                         </p>
-
-                        <br>
 
                         <small>
 
@@ -162,29 +178,7 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         </small>
 
-                        <br><br>
-
-                        <?php if(!$notification['is_read']): ?>
-
-                            <a
-                                href="/user/notifications.php?read=<?= $notification['id'] ?>"
-                                class="action-btn">
-
-                                Mark as Read
-
-                            </a>
-
-                        <?php else: ?>
-
-                            <span class="badge badge-success">
-
-                                Read
-
-                            </span>
-
-                        <?php endif; ?>
-
-                    </div>
+                    </a>
 
                 <?php endforeach; ?>
 

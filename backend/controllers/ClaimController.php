@@ -54,6 +54,14 @@ class ClaimController
     {
         return $this->claimModel->rejectClaim($id);
     }
+
+    /**
+     * Mark approved claim as collected
+     */
+    public function collect(int $id): bool
+    {
+        return $this->claimModel->collectClaim($id);
+    }
     
     public function userClaims(int $userId): array
 {

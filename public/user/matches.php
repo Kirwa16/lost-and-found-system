@@ -9,6 +9,12 @@ if (!isset($_SESSION['user_id']))
     exit;
 }
 
+if (!in_array($_SESSION['role'], ['student', 'staff'], true))
+{
+    header("Location: /admin/dashboard.php");
+    exit;
+}
+
 require_once __DIR__ . '/../../backend/config/database.php';
 
 $db = new Database();
@@ -19,6 +25,7 @@ $stmt = $conn->prepare(
         m.id,
         m.confidence_score,
         m.status,
+        c.status AS claim_status,
 
         l.item_name AS lost_item,
         l.category,
@@ -32,6 +39,11 @@ $stmt = $conn->prepare(
 
      INNER JOIN found_items f
         ON f.id = m.found_item_id
+
+     LEFT JOIN claims c
+        ON c.match_id = m.id
+        AND c.user_id = :user_id
+        AND c.status IN ('pending', 'approved', 'collected')
 
      WHERE l.user_id = :user_id
 
@@ -84,7 +96,11 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                 <?php if(empty($matches)): ?>
 
-                    <p>No matches found.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-handshake"></i>
+                        <h2>No Potential Matches</h2>
+                        <p>We have not found any matches for your lost reports yet. New matches will appear here when they are detected or approved.</p>
+                    </div>
 
                 <?php else: ?>
 
@@ -147,7 +163,7 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                             <td>
 
-                                <?php if($match['status'] === 'approved'): ?>
+                                <?php if($match['status'] === 'approved' && empty($match['claim_status'])): ?>
 
                                     <a
                                         href="/user/submit-claim.php?match_id=<?= $match['id'] ?>"
@@ -156,6 +172,12 @@ $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         Submit Claim
 
                                     </a>
+
+                                <?php elseif(!empty($match['claim_status'])): ?>
+
+                                    <span class="badge badge-success">
+                                        Claim <?= ucfirst($match['claim_status']) ?>
+                                    </span>
 
                                 <?php else: ?>
 

@@ -3,8 +3,15 @@ session_start();
 
 require_once __DIR__ . '/../backend/config/database.php';
 require_once __DIR__ . '/../backend/models/User.php';
+require_once __DIR__ . '/../backend/helpers/csrf.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
+    if(!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = "Security token expired. Please try again.";
+        header("Location: /login.php");
+        exit();
+    }
+
     
     $database = new Database();
     $db = $database->getConnection();
@@ -16,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
     if ($user->login()) {
         // Clear old session data but keep the session
         $_SESSION = array();
+        csrf_token();
         
         // Set new session variables
         $_SESSION['user_id'] = $user->id;
@@ -26,8 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
         // Redirect based on role
         if ($user->role === 'admin') {
             header("Location: /admin/dashboard.php");
-        } else {
+        } elseif (in_array($user->role, ['student', 'staff'], true)) {
             header("Location: /user/dashboard.php");
+        } else {
+            session_destroy();
+            session_start();
+            $_SESSION['error'] = "Your account role is not supported. Please contact an administrator.";
+            header("Location: /login.php");
         }
         exit();
     } else {

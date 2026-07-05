@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once __DIR__ . '/../backend/helpers/csrf.php';
 include __DIR__ . '/components/header.php';
 ?>
 
@@ -52,6 +53,7 @@ include __DIR__ . '/components/header.php';
                 action="/process-register.php"
                 method="POST"
                 id="registerForm">
+                <?= csrf_field() ?>
 
                 <div class="form-group">
                     <input
@@ -67,6 +69,14 @@ include __DIR__ . '/components/header.php';
                         name="email"
                         placeholder="University Email Address"
                         required>
+                </div>
+
+                <div class="form-group">
+                    <select name="role" required>
+                        <option value="">Select Account Type</option>
+                        <option value="student">Student</option>
+                        <option value="staff">Staff</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -128,4 +138,3 @@ document.getElementById('registerForm')
 </script>
 
 <?php include __DIR__ . '/components/footer.php'; ?>
-
