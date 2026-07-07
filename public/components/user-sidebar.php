@@ -1,74 +1,35 @@
 <div class="sidebar" id="sidebar">
 
     <div class="logo">
-
         <h2>
             <i class="fas fa-box-open"></i>
             <span>Lost & Found</span>
         </h2>
-
     </div>
 
     <?php
         $currentPage = basename($_SERVER['PHP_SELF']);
-        $pendingMatches = 0;
-        $pendingClaims = 0;
         $unreadNotifications = 0;
 
-        if(isset($_SESSION['user_id']))
-        {
+        if (isset($_SESSION['user_id'])) {
+
             require_once __DIR__ . '/../../backend/config/database.php';
 
-            $__sidebarDatabase = new Database();
-            $__sidebarConn = $__sidebarDatabase->getConnection();
+            $database = new Database();
+            $conn = $database->getConnection();
 
-            $__sidebarStmt = $__sidebarConn->prepare(
-                "SELECT COUNT(*)
-                 FROM matches m
-                 INNER JOIN lost_items l
-                    ON l.id = m.lost_item_id
-                 WHERE l.user_id = :user_id
-                 AND m.status = 'approved'
-                 AND NOT EXISTS (
-                     SELECT 1
-                     FROM claims c
-                     WHERE c.user_id = :user_id
-                     AND c.match_id = m.id
-                     AND c.status IN ('pending', 'approved', 'collected')
-                 )"
-            );
+            $stmt = $conn->prepare("
+                SELECT COUNT(*)
+                FROM notifications
+                WHERE user_id = :user_id
+                AND is_read = 0
+            ");
 
-            $__sidebarStmt->execute([
+            $stmt->execute([
                 ':user_id' => $_SESSION['user_id']
             ]);
 
-            $pendingMatches = (int)$__sidebarStmt->fetchColumn();
-
-            $__sidebarStmt = $__sidebarConn->prepare(
-                "SELECT COUNT(*)
-                 FROM claims
-                 WHERE user_id = :user_id
-                 AND status IN ('pending', 'approved')"
-            );
-
-            $__sidebarStmt->execute([
-                ':user_id' => $_SESSION['user_id']
-            ]);
-
-            $pendingClaims = (int)$__sidebarStmt->fetchColumn();
-
-            $__sidebarStmt = $__sidebarConn->prepare(
-                "SELECT COUNT(*)
-                 FROM notifications
-                 WHERE user_id = :user_id
-                 AND is_read = 0"
-            );
-
-            $__sidebarStmt->execute([
-                ':user_id' => $_SESSION['user_id']
-            ]);
-
-            $unreadNotifications = (int)$__sidebarStmt->fetchColumn();
+            $unreadNotifications = (int)$stmt->fetchColumn();
         }
     ?>
 
@@ -122,11 +83,6 @@
             <a href="/user/matches.php">
                 <i class="fas fa-handshake"></i>
                 <span>Matches</span>
-                <?php if($pendingMatches > 0): ?>
-                    <strong class="notification-count">
-                        <?= $pendingMatches > 99 ? '99+' : $pendingMatches ?>
-                    </strong>
-                <?php endif; ?>
             </a>
         </li>
 
@@ -134,11 +90,6 @@
             <a href="/user/claims.php">
                 <i class="fas fa-clipboard-check"></i>
                 <span>My Claims</span>
-                <?php if($pendingClaims > 0): ?>
-                    <strong class="notification-count">
-                        <?= $pendingClaims > 99 ? '99+' : $pendingClaims ?>
-                    </strong>
-                <?php endif; ?>
             </a>
         </li>
 
@@ -146,14 +97,16 @@
             <a href="/user/notifications.php">
                 <i class="fas fa-bell"></i>
                 <span>Notifications</span>
-                <?php if($unreadNotifications > 0): ?>
+
+                <?php if ($unreadNotifications > 0): ?>
                     <strong class="notification-count">
                         <?= $unreadNotifications > 99 ? '99+' : $unreadNotifications ?>
                     </strong>
                 <?php endif; ?>
+
             </a>
-</li>
+        </li>
 
     </ul>
 
-</div>  
+</div>

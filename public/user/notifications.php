@@ -2,14 +2,12 @@
 
 session_start();
 
-if(!isset($_SESSION['user_id']))
-{
+if (!isset($_SESSION['user_id'])) {
     header("Location: /login.php");
     exit;
 }
 
-if(!in_array($_SESSION['role'], ['student', 'staff'], true))
-{
+if (!in_array($_SESSION['role'], ['student', 'staff'], true)) {
     header("Location: /admin/dashboard.php");
     exit;
 }
@@ -19,35 +17,38 @@ require_once __DIR__ . '/../../backend/config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
-$stmt = $conn->prepare(
-    "SHOW COLUMNS
-     FROM notifications
-     LIKE 'link'"
-);
+/*
+|--------------------------------------------------------------------------
+| Check if notification links are supported
+|--------------------------------------------------------------------------
+*/
+
+$stmt = $conn->prepare("
+    SHOW COLUMNS
+    FROM notifications
+    LIKE 'link'
+");
+
 $stmt->execute();
+
 $hasNotificationLinkColumn = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
 
 /*
 |--------------------------------------------------------------------------
-| Mark All Notifications As Read
+| Automatically mark all unread notifications as read
 |--------------------------------------------------------------------------
 */
 
-if(isset($_GET['mark_all']))
-{
-    $stmt = $conn->prepare(
-        "UPDATE notifications
-         SET is_read = 1
-         WHERE user_id = :user_id"
-    );
+$stmt = $conn->prepare("
+    UPDATE notifications
+    SET is_read = 1
+    WHERE user_id = :user_id
+    AND is_read = 0
+");
 
-    $stmt->execute([
-        ':user_id' => $_SESSION['user_id']
-    ]);
-
-    header("Location: notifications.php");
-    exit;
-}
+$stmt->execute([
+    ':user_id' => $_SESSION['user_id']
+]);
 
 /*
 |--------------------------------------------------------------------------
@@ -56,15 +57,21 @@ if(isset($_GET['mark_all']))
 */
 
 $linkSelect = $hasNotificationLinkColumn
-    ? 'link'
+    ? "link"
     : "NULL AS link";
 
-$stmt = $conn->prepare(
-    "SELECT id, user_id, message, {$linkSelect}, is_read, created_at
-     FROM notifications
-     WHERE user_id = :user_id
-     ORDER BY created_at DESC"
-);
+$stmt = $conn->prepare("
+    SELECT
+        id,
+        user_id,
+        message,
+        {$linkSelect},
+        is_read,
+        created_at
+    FROM notifications
+    WHERE user_id = :user_id
+    ORDER BY created_at DESC
+");
 
 $stmt->execute([
     ':user_id' => $_SESSION['user_id']
@@ -80,9 +87,7 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
 
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Notifications</title>
 
@@ -101,39 +106,42 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <?php include __DIR__ . '/../components/user-sidebar.php'; ?>
 
     <div class="main" id="main">
+
         <?php include __DIR__ . '/../components/topbar-user.php'; ?>
 
         <div class="content">
 
             <h1>Notifications</h1>
 
-            <?php if(empty($notifications)): ?>
+            <?php if (empty($notifications)): ?>
 
                 <div class="card empty-state">
+
                     <i class="fas fa-bell-slash"></i>
+
                     <h2>No Notifications</h2>
-                    <p>You are all caught up. Claim updates and match alerts will appear here.</p>
+
+                    <p>
+                        You are all caught up. Claim updates and match alerts will appear here.
+                    </p>
 
                 </div>
 
             <?php else: ?>
 
-                <div class="page-actions">
-                    <a href="/user/notifications.php?mark_all=1" class="secondary-btn">
-                        <i class="fas fa-check-double"></i>
-                        Mark All as Read
-                    </a>
-                </div>
-
                 <?php $count = count($notifications); ?>
 
-                <?php foreach($notifications as $notification): ?>
+                <?php foreach ($notifications as $notification): ?>
 
                     <?php
-                        $link = $notification['link'] ?: '/user/notifications.php';
-                        if(strpos($link, '/') !== 0 || strpos($link, '//') === 0) {
-                            $link = '/user/notifications.php';
-                        }
+                    $link = $notification['link'] ?: '/user/notifications.php';
+
+                    if (
+                        strpos($link, '/') !== 0 ||
+                        strpos($link, '//') === 0
+                    ) {
+                        $link = '/user/notifications.php';
+                    }
                     ?>
 
                     <a
@@ -143,13 +151,9 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                         <h3>
 
-                            <?php if(!$notification['is_read']): ?>
-                                <span class="unread-dot" aria-hidden="true"></span>
-                            <?php endif; ?>
+                            <?php if (!$notification['is_read']): ?>
 
-                            Notification <?= $count-- ?>
-
-                            <?php if(!$notification['is_read']): ?>
+                                <span class="unread-dot"></span>
 
                                 <span class="badge badge-warning">
                                     New
@@ -157,25 +161,19 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                             <?php endif; ?>
 
+                            Notification <?= $count-- ?>
+
                         </h3>
 
                         <p>
-
-                            <?= htmlspecialchars(
-                                $notification['message']
-                            ) ?>
-
+                            <?= htmlspecialchars($notification['message']) ?>
                         </p>
 
                         <small>
-
                             <?= date(
                                 'd M Y H:i',
-                                strtotime(
-                                    $notification['created_at']
-                                )
+                                strtotime($notification['created_at'])
                             ) ?>
-
                         </small>
 
                     </a>
@@ -189,7 +187,8 @@ $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
 </div>
-<script src="/assets/js/sidebar.js"></script>
-</body>
 
+<script src="/assets/js/sidebar.js"></script>
+
+</body>
 </html>
