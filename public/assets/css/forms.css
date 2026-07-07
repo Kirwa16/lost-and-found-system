@@ -137,6 +137,30 @@ body{
     transition:.3s;
 }
 
+.password-wrapper{
+    position:relative;
+}
+
+.password-wrapper input{
+    padding-right:48px;
+}
+
+.password-wrapper .toggle-password{
+    position:absolute;
+    top:50%;
+    right:16px;
+    transform:translateY(-50%);
+
+    color:#64748b;
+    cursor:pointer;
+}
+
+.password-wrapper .toggle-password:hover,
+.password-wrapper .toggle-password:focus{
+    color:#334155;
+    outline:none;
+}
+
 .form-group input:focus,
 .form-group select:focus{
     outline:none;

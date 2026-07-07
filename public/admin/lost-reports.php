@@ -105,7 +105,7 @@ $claimed = count(array_filter($reports, fn($r)=>$r['status']=='claimed'));
 
 <?php include __DIR__.'/../components/sidebar.php'; ?>
 
-<div class="main">
+<div class="main" id="main">
 
 <?php include __DIR__.'/../components/topbar.php'; ?>
 
@@ -228,6 +228,8 @@ View
 </div>
 
 </div>
+
+<script src="/assets/js/sidebar.js"></script>
 
 <script>
 // Chart placeholders.

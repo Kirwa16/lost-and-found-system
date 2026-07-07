@@ -2,11 +2,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const toggle = document.getElementById("sidebarToggle");
     const sidebar = document.getElementById("sidebar");
-    const main = document.getElementById("main");
-
-    console.log(toggle);
-    console.log(sidebar);
-    console.log(main);
+    const main = document.getElementById("main") || document.querySelector(".main");
 
     if (!toggle || !sidebar || !main) {
         console.error("Sidebar elements not found.");

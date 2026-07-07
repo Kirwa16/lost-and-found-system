@@ -108,7 +108,7 @@ cursor:pointer;
 
 <?php include __DIR__.'/../components/sidebar.php'; ?>
 
-<div class="main">
+<div class="main" id="main">
 
 <?php include __DIR__.'/../components/topbar.php'; ?>
 
@@ -209,6 +209,8 @@ This page is ready to be connected to your report generation logic. Based on the
 </div>
 
 </div>
+
+<script src="/assets/js/sidebar.js"></script>
 
 </body>
 </html>

@@ -8,6 +8,10 @@ include __DIR__ . '/components/header.php';
 
     <div class="auth-left">
 
+        <div class="auth-logo" aria-hidden="true">
+            <i class="fas fa-box-open"></i>
+        </div>
+
         <h1>Lost & Found Management System</h1>
 
         <p>
@@ -80,21 +84,39 @@ include __DIR__ . '/components/header.php';
                 </div>
 
                 <div class="form-group">
-                    <input
-                        type="password"
-                        name="password"
-                        id="password"
-                        placeholder="Password"
-                        required>
+                    <div class="password-wrapper">
+                        <input
+                            type="password"
+                            name="password"
+                            id="password"
+                            placeholder="Password"
+                            required>
+
+                        <i
+                            class="fas fa-eye toggle-password"
+                            data-target="password"
+                            role="button"
+                            tabindex="0"
+                            aria-label="Show password"></i>
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <input
-                        type="password"
-                        name="confirm_password"
-                        id="confirm_password"
-                        placeholder="Confirm Password"
-                        required>
+                    <div class="password-wrapper">
+                        <input
+                            type="password"
+                            name="confirm_password"
+                            id="confirm_password"
+                            placeholder="Confirm Password"
+                            required>
+
+                        <i
+                            class="fas fa-eye toggle-password"
+                            data-target="confirm_password"
+                            role="button"
+                            tabindex="0"
+                            aria-label="Show password"></i>
+                    </div>
                 </div>
 
                 <button
@@ -136,5 +158,7 @@ document.getElementById('registerForm')
     }
 });
 </script>
+
+<script src="/assets/js/password-toggle.js"></script>
 
 <?php include __DIR__ . '/components/footer.php'; ?>

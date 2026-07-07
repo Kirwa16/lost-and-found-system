@@ -74,7 +74,7 @@ $foundCats=$conn->query("SELECT category,COUNT(*) total FROM found_items GROUP B
 <body>
 <div class="admin-layout">
 <?php include __DIR__.'/../components/sidebar.php'; ?>
-<div class="main">
+<div class="main" id="main">
 <?php include __DIR__.'/../components/topbar.php'; ?>
 <div class="content">
 

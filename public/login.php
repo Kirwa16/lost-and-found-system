@@ -62,11 +62,21 @@ include __DIR__ . '/components/header.php';
                 </div>
 
                 <div class="form-group">
-                    <input
-                    type="password"
-                    name="password"
-                    placeholder="Password"
-                    required>
+                    <div class="password-wrapper">
+                        <input
+                        type="password"
+                        name="password"
+                        id="login_password"
+                        placeholder="Password"
+                        required>
+
+                        <i
+                        class="fas fa-eye toggle-password"
+                        data-target="login_password"
+                        role="button"
+                        tabindex="0"
+                        aria-label="Show password"></i>
+                    </div>
                 </div>
 
                 <button
@@ -95,5 +105,7 @@ include __DIR__ . '/components/header.php';
     </div>
 
 </div>
+
+<script src="/assets/js/password-toggle.js"></script>
 
 <?php include __DIR__ . '/components/footer.php'; ?>
