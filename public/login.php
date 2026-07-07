@@ -10,7 +10,10 @@ include __DIR__ . '/components/header.php';
 <div class="auth-wrapper">
 
     <div class="auth-left">
-        
+
+        <div class="auth-logo" aria-hidden="true">
+            <i class="fas fa-box-open"></i>
+        </div>
 
         <h1>Lost & Found</h1>
 

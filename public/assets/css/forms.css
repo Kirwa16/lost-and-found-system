@@ -32,6 +32,19 @@ body{
     justify-content:center;
 }
 
+.auth-logo{
+    display:flex;
+    align-items:center;
+
+    margin-bottom:18px;
+
+    color:#fff;
+}
+
+.auth-logo i{
+    font-size:52px;
+}
+
 .auth-left h1{
     font-size:48px;
     margin-bottom:20px;
@@ -226,6 +239,14 @@ body{
 
     .auth-left h1{
         font-size:36px;
+    }
+
+    .auth-logo{
+        margin-bottom:14px;
+    }
+
+    .auth-logo i{
+        font-size:44px;
     }
 
     .auth-card{
