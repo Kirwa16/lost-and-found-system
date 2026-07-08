@@ -12,7 +12,7 @@ include __DIR__ . '/components/header.php';
             <i class="fas fa-box-open"></i>
         </div>
 
-        <h1>Lost & Found Management System</h1>
+        <h1>Lost &amp; Found Management System</h1>
 
         <p>
             Helping students and staff recover lost items quickly,
@@ -36,7 +36,7 @@ include __DIR__ . '/components/header.php';
             <h2>Create Account</h2>
 
             <p class="subtitle">
-                Register to access the Lost & Found System
+                Register to access the Lost &amp; Found System
             </p>
 
             <?php
@@ -57,7 +57,10 @@ include __DIR__ . '/components/header.php';
                 action="/process-register.php"
                 method="POST"
                 id="registerForm">
+
                 <?= csrf_field() ?>
+
+                <!-- Full Name -->
 
                 <div class="form-group">
                     <input
@@ -67,6 +70,8 @@ include __DIR__ . '/components/header.php';
                         required>
                 </div>
 
+                <!-- Email -->
+
                 <div class="form-group">
                     <input
                         type="email"
@@ -75,16 +80,57 @@ include __DIR__ . '/components/header.php';
                         required>
                 </div>
 
+                <!-- Role -->
+
                 <div class="form-group">
-                    <select name="role" required>
+                    <select
+                        name="role"
+                        id="role"
+                        required>
+
                         <option value="">Select Account Type</option>
                         <option value="student">Student</option>
                         <option value="staff">Staff</option>
+
                     </select>
                 </div>
 
+                <!-- Admission Number -->
+
+                <div
+                    class="form-group"
+                    id="admissionGroup"
+                    style="display:none;">
+
+                    <input
+                        type="text"
+                        id="admission_number"
+                        name="admission_number"
+                        placeholder="Admission Number">
+
+                </div>
+
+                <!-- Registration Number -->
+
+                <div
+                    class="form-group"
+                    id="registrationGroup"
+                    style="display:none;">
+
+                    <input
+                        type="text"
+                        id="registration_number"
+                        name="registration_number"
+                        placeholder="Registration Number">
+
+                </div>
+
+                <!-- Password -->
+
                 <div class="form-group">
+
                     <div class="password-wrapper">
+
                         <input
                             type="password"
                             name="password"
@@ -97,12 +143,19 @@ include __DIR__ . '/components/header.php';
                             data-target="password"
                             role="button"
                             tabindex="0"
-                            aria-label="Show password"></i>
+                            aria-label="Show password">
+                        </i>
+
                     </div>
+
                 </div>
 
+                <!-- Confirm Password -->
+
                 <div class="form-group">
+
                     <div class="password-wrapper">
+
                         <input
                             type="password"
                             name="confirm_password"
@@ -115,24 +168,32 @@ include __DIR__ . '/components/header.php';
                             data-target="confirm_password"
                             role="button"
                             tabindex="0"
-                            aria-label="Show password"></i>
+                            aria-label="Show password">
+                        </i>
+
                     </div>
+
                 </div>
 
                 <button
                     type="submit"
                     name="register"
                     class="btn">
+
                     Create Account
+
                 </button>
 
             </form>
 
             <div class="link">
+
                 Already have an account?
+
                 <a href="/login.php">
                     Login
                 </a>
+
             </div>
 
         </div>
@@ -142,21 +203,76 @@ include __DIR__ . '/components/header.php';
 </div>
 
 <script>
-document.getElementById('registerForm')
-.addEventListener('submit', function(e){
+
+const role = document.getElementById("role");
+
+const admissionGroup = document.getElementById("admissionGroup");
+const registrationGroup = document.getElementById("registrationGroup");
+
+const admissionInput = document.getElementById("admission_number");
+const registrationInput = document.getElementById("registration_number");
+
+role.addEventListener("change", function(){
+
+    admissionInput.required = false;
+    registrationInput.required = false;
+
+    admissionGroup.style.display = "none";
+    registrationGroup.style.display = "none";
+
+    if(this.value === "student")
+    {
+        admissionGroup.style.display = "block";
+        admissionInput.required = true;
+    }
+
+    if(this.value === "staff")
+    {
+        registrationGroup.style.display = "block";
+        registrationInput.required = true;
+    }
+
+});
+
+document.getElementById("registerForm")
+.addEventListener("submit", function(e){
 
     const password =
-        document.getElementById('password').value;
+        document.getElementById("password").value;
 
     const confirmPassword =
-        document.getElementById('confirm_password').value;
+        document.getElementById("confirm_password").value;
 
     if(password !== confirmPassword)
     {
         e.preventDefault();
-        alert('Passwords do not match.');
+        alert("Passwords do not match.");
+        return;
     }
+
+    if(role.value === "")
+    {
+        e.preventDefault();
+        alert("Please select an account type.");
+        return;
+    }
+
+    if(role.value === "student" && admissionInput.value.trim() === "")
+    {
+        e.preventDefault();
+        alert("Please enter your admission number.");
+        return;
+    }
+
+    if(role.value === "staff" && registrationInput.value.trim() === "")
+    {
+        e.preventDefault();
+        alert("Please enter your registration number.");
+        return;
+    }
+
 });
+
 </script>
 
 <script src="/assets/js/password-toggle.js"></script>

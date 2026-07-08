@@ -15,7 +15,8 @@
     background:#475569;
     color:#fff;
 
-    overflow:hidden;
+    overflow-y:auto;
+    overflow-x:hidden;
 
     transition:width .3s ease, padding .3s ease;
 }
@@ -28,7 +29,6 @@
     display:flex;
     justify-content:center;
     align-items:center;
-
     margin-bottom:40px;
 }
 
@@ -37,9 +37,8 @@
     align-items:center;
     gap:10px;
 
-    white-space:nowrap;
-
     font-size:24px;
+    white-space:nowrap;
     color:#fff;
 }
 
@@ -54,6 +53,8 @@
 
 .menu{
     list-style:none;
+    margin:0;
+    padding:0;
 }
 
 .menu li{
@@ -61,14 +62,13 @@
 }
 
 .menu-title{
-    margin:20px 0 10px;
+    margin:22px 0 10px;
     padding:0 18px;
 
     font-size:11px;
     font-weight:700;
-
-    text-transform:uppercase;
     letter-spacing:1px;
+    text-transform:uppercase;
 
     color:#94a3b8;
 
@@ -79,34 +79,18 @@
     display:flex;
     align-items:center;
     gap:12px;
-    position:relative;
 
     padding:12px 18px;
+
+    border-radius:10px;
 
     color:#cbd5e1;
     text-decoration:none;
     white-space:nowrap;
 
-    border-radius:10px;
-
-    transition:all .3s ease;
-}
-
-.notification-count{
-    margin-left:auto;
-    min-width:20px;
-    height:20px;
-    padding:0 6px;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    border-radius:999px;
-    background:#ef4444;
-    color:#fff;
-    font-size:11px;
-    font-weight:700;
-    line-height:1;
-    box-shadow:0 0 0 2px rgba(255,255,255,.18);
+    transition:background .25s ease,
+               color .25s ease,
+               transform .2s ease;
 }
 
 .menu a i{
@@ -115,19 +99,53 @@
     font-size:18px;
 }
 
-.menu li:not(.active) a:hover{
+/* Hover */
+
+.menu a:not(.active):hover{
     background:rgba(255,255,255,.08);
     color:#fff;
 }
 
-.menu li.active a{
-    background:var(--primary-color,#2563eb);
+.menu a:not(.active):hover i{
     color:#fff;
-    font-weight:600;
 }
 
-.menu li.active a i{
+/* Active */
+
+.menu a.active{
+    background:#2563eb;
     color:#fff;
+    font-weight:600;
+    box-shadow:0 6px 18px rgba(37,99,235,.25);
+}
+
+.menu a.active i{
+    color:#fff;
+}
+
+/* Notification Badge */
+
+.notification-count{
+    margin-left:auto;
+
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
+    min-width:20px;
+    height:20px;
+    padding:0 6px;
+
+    border-radius:999px;
+
+    background:#ef4444;
+    color:#fff;
+
+    font-size:11px;
+    font-weight:700;
+    line-height:1;
+
+    box-shadow:0 0 0 2px rgba(255,255,255,.18);
 }
 
 /* ==================================================
@@ -181,10 +199,13 @@
     position:absolute;
     top:7px;
     right:7px;
-    min-width:9px;
+
     width:9px;
     height:9px;
+    min-width:9px;
+
     padding:0;
+
     overflow:hidden;
     text-indent:-999px;
 }
@@ -197,11 +218,11 @@
     width:6px;
 }
 
+.sidebar::-webkit-scrollbar-track{
+    background:transparent;
+}
+
 .sidebar::-webkit-scrollbar-thumb{
     background:rgba(255,255,255,.2);
     border-radius:10px;
-}
-
-.sidebar::-webkit-scrollbar-track{
-    background:transparent;
 }

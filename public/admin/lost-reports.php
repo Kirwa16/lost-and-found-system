@@ -1,20 +1,4 @@
 <?php
-/**
- * admin/lost-reports.php
- *
- * Starter template generated for the Lost & Found Management System.
- * This page is intended to mirror the admin theme and provide:
- * - Summary cards
- * - Search and filters
- * - Category & monthly charts
- * - Export (CSV)
- * - Lost reports history
- *
- * NOTE:
- * This is a starter scaffold. Integrate with your existing dashboard
- * helper functions and styling as needed.
- */
-
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
@@ -32,9 +16,7 @@ require_once __DIR__ . '/../../backend/config/database.php';
 $db = new Database();
 $conn = $db->getConnection();
 
-/* ---------------------------------------------------------
-   Filters
---------------------------------------------------------- */
+/* ---------------- Filters ---------------- */
 
 $search   = trim($_GET['search'] ?? '');
 $status   = $_GET['status'] ?? 'all';
@@ -58,30 +40,62 @@ if ($category !== 'all') {
     $params[':category'] = $category;
 }
 
-$sql = "
-SELECT
-    li.*,
-    u.fullname
-FROM lost_items li
-JOIN users u
-ON li.user_id = u.id
-";
+$sql = "SELECT li.*,u.fullname
+        FROM lost_items li
+        JOIN users u ON li.user_id=u.id";
 
 if ($where) {
-    $sql .= " WHERE " . implode(" AND ", $where);
+    $sql .= " WHERE ".implode(" AND ",$where);
 }
 
 $sql .= " ORDER BY li.created_at DESC";
 
-$stmt = $conn->prepare($sql);
+$stmt=$conn->prepare($sql);
 $stmt->execute($params);
-$reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$reports=$stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$totalReports = count($reports);
-$pending = count(array_filter($reports, fn($r)=>$r['status']=='pending'));
-$matched = count(array_filter($reports, fn($r)=>$r['status']=='matched'));
-$claimed = count(array_filter($reports, fn($r)=>$r['status']=='claimed'));
+$totalReports=count($reports);
+$pending=count(array_filter($reports,fn($r)=>$r['status']=='pending'));
+$matched=count(array_filter($reports,fn($r)=>$r['status']=='matched'));
+$claimed=count(array_filter($reports,fn($r)=>$r['status']=='claimed'));
 
+/* ---------------- Category Chart ---------------- */
+
+$cat=$conn->query("
+SELECT category,COUNT(*) total
+FROM lost_items
+GROUP BY category
+ORDER BY total DESC
+");
+
+$categoryLabels=[];
+$categoryData=[];
+
+while($row=$cat->fetch(PDO::FETCH_ASSOC)){
+    $categoryLabels[]=$row['category'];
+    $categoryData[]=(int)$row['total'];
+}
+
+/* ---------------- Monthly Chart ---------------- */
+
+$months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+$monthData=array_fill(0,12,0);
+
+$m=$conn->query("
+SELECT MONTH(created_at) month_no,
+COUNT(*) total
+FROM lost_items
+GROUP BY MONTH(created_at)
+");
+
+while($row=$m->fetch(PDO::FETCH_ASSOC)){
+    $monthData[$row['month_no']-1]=(int)$row['total'];
+}
+
+/* ---------------- Categories for Filter ---------------- */
+
+$categories=$conn->query("SELECT DISTINCT category FROM lost_items ORDER BY category")
+                 ->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -94,7 +108,9 @@ $claimed = count(array_filter($reports, fn($r)=>$r['status']=='claimed'));
 <link rel="stylesheet" href="/assets/css/sidebar.css">
 <link rel="stylesheet" href="/assets/css/topbar.css">
 <link rel="stylesheet" href="/assets/css/reports.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -114,72 +130,56 @@ $claimed = count(array_filter($reports, fn($r)=>$r['status']=='claimed'));
 <h1>Lost Reports</h1>
 
 <div class="stats-grid">
-
-<div class="stat-card">
-<h3>Total Reports</h3>
-<p><?= $totalReports ?></p>
-</div>
-
-<div class="stat-card">
-<h3>Pending</h3>
-<p><?= $pending ?></p>
-</div>
-
-<div class="stat-card">
-<h3>Matched</h3>
-<p><?= $matched ?></p>
-</div>
-
-<div class="stat-card">
-<h3>Claimed</h3>
-<p><?= $claimed ?></p>
-</div>
-
+<div class="stat-card"><h3>Total Reports</h3><p><?= $totalReports ?></p></div>
+<div class="stat-card"><h3>Pending</h3><p><?= $pending ?></p></div>
+<div class="stat-card"><h3>Matched</h3><p><?= $matched ?></p></div>
+<div class="stat-card"><h3>Claimed</h3><p><?= $claimed ?></p></div>
 </div>
 
 <form method="GET" class="filters">
-
-<input
-type="text"
-name="search"
-placeholder="Search item..."
+<input type="text" name="search" placeholder="Search item..."
 value="<?= htmlspecialchars($search) ?>">
 
 <select name="status">
 <option value="all">All Status</option>
-<option value="pending">Pending</option>
-<option value="matched">Matched</option>
-<option value="claimed">Claimed</option>
+<?php foreach(['pending','matched','claimed'] as $s): ?>
+<option value="<?= $s ?>" <?= $status==$s?'selected':'' ?>>
+<?= ucfirst($s) ?>
+</option>
+<?php endforeach; ?>
+</select>
+
+<select name="category">
+<option value="all">All Categories</option>
+<?php foreach($categories as $cat): ?>
+<option value="<?= htmlspecialchars($cat) ?>" <?= $category==$cat?'selected':'' ?>>
+<?= htmlspecialchars($cat) ?>
+</option>
+<?php endforeach; ?>
 </select>
 
 <button type="submit">Apply</button>
-
 </form>
 
 <div class="dashboard-chart-grid">
-
-<div class="card">
+<div class="card" style="height:420px">
 <h2>Lost Reports by Category</h2>
 <canvas id="categoryChart"></canvas>
 </div>
 
-<div class="card">
+<div class="card" style="height:420px">
 <h2>Monthly Trend</h2>
 <canvas id="monthlyChart"></canvas>
 </div>
-
 </div>
 
 <div class="card">
-
 <h2>Lost Reports History</h2>
 
 <table class="table">
-
 <thead>
-
 <tr>
-<th>Item No.</th>
+<th>#</th>
 <th>Item</th>
 <th>Category</th>
 <th>Reported By</th>
@@ -189,7 +189,6 @@ value="<?= htmlspecialchars($search) ?>">
 <th>Reported On</th>
 <th>Action</th>
 </tr>
-
 </thead>
 
 <tbody>
@@ -197,7 +196,6 @@ value="<?= htmlspecialchars($search) ?>">
 <?php foreach($reports as $i=>$report): ?>
 
 <tr>
-
 <td><?= $i+1 ?></td>
 <td><?= htmlspecialchars($report['item_name']) ?></td>
 <td><?= htmlspecialchars($report['category']) ?></td>
@@ -206,49 +204,54 @@ value="<?= htmlspecialchars($search) ?>">
 <td><?= htmlspecialchars($report['date_lost']) ?></td>
 <td><?= ucfirst($report['status']) ?></td>
 <td><?= date('d M Y',strtotime($report['created_at'])) ?></td>
-
-<td>
-<a href="view-item.php?type=lost&id=<?= $report['id'] ?>">
-View
-</a>
-</td>
-
+<td><a href="view-item.php?type=lost&id=<?= $report['id'] ?>">View</a></td>
 </tr>
 
 <?php endforeach; ?>
 
 </tbody>
-
 </table>
-
 </div>
 
 </div>
-
 </div>
-
 </div>
 
 <script src="/assets/js/sidebar.js"></script>
 
 <script>
-// Chart placeholders.
-// Replace with dynamic Chart.js datasets as desired.
+
 new Chart(document.getElementById('categoryChart'),{
 type:'pie',
 data:{
-labels:['Category'],
-datasets:[{data:[1]}]
+labels:<?= json_encode($categoryLabels) ?>,
+datasets:[{
+data:<?= json_encode($categoryData) ?>
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false
 }
 });
 
 new Chart(document.getElementById('monthlyChart'),{
 type:'line',
 data:{
-labels:['Jan'],
-datasets:[{label:'Reports',data:[1]}]
+labels:<?= json_encode($months) ?>,
+datasets:[{
+label:'Lost Reports',
+data:<?= json_encode($monthData) ?>,
+fill:false,
+tension:.35
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false
 }
 });
+
 </script>
 
 </body>
