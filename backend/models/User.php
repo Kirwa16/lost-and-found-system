@@ -23,32 +23,64 @@ class User
     |--------------------------------------------------------------------------
     */
     public function register()
-    {
-        if ($this->emailExists()) {
-            return false;
-        }
-
-        $role = in_array($this->role, ['student', 'staff'], true)
-            ? $this->role
-            : 'student';
-
-        $query = "INSERT INTO {$this->table_name}
-                  (fullname, email, password, role)
-                  VALUES
-                  (:fullname, :email, :password, :role)";
-
-        $stmt = $this->conn->prepare($query);
-
-        $hashedPassword = password_hash($this->password, PASSWORD_BCRYPT);
-
-        $stmt->bindParam(':fullname', $this->fullname);
-        $stmt->bindParam(':email', $this->email);
-        $stmt->bindParam(':password', $hashedPassword);
-        $stmt->bindParam(':role', $role);
-
-        return $stmt->execute();
+{
+    if ($this->emailExists()) {
+        return false;
     }
 
+    $role = in_array($this->role, ['student', 'staff'], true)
+        ? $this->role
+        : 'student';
+
+    // Ensure the correct identifier is supplied
+    if ($role === 'student' && empty($this->admission_number)) {
+        return false;
+    }
+
+    if ($role === 'staff' && empty($this->registration_number)) {
+        return false;
+    }
+
+    $query = "INSERT INTO {$this->table_name}
+              (
+                  fullname,
+                  email,
+                  admission_number,
+                  registration_number,
+                  password,
+                  role
+              )
+              VALUES
+              (
+                  :fullname,
+                  :email,
+                  :admission_number,
+                  :registration_number,
+                  :password,
+                  :role
+              )";
+
+    $stmt = $this->conn->prepare($query);
+
+    $hashedPassword = password_hash($this->password, PASSWORD_BCRYPT);
+
+    $admissionNumber = $role === 'student'
+        ? $this->admission_number
+        : null;
+
+    $registrationNumber = $role === 'staff'
+        ? $this->registration_number
+        : null;
+
+    $stmt->bindParam(':fullname', $this->fullname);
+    $stmt->bindParam(':email', $this->email);
+    $stmt->bindParam(':admission_number', $admissionNumber);
+    $stmt->bindParam(':registration_number', $registrationNumber);
+    $stmt->bindParam(':password', $hashedPassword);
+    $stmt->bindParam(':role', $role);
+
+    return $stmt->execute();
+}
     /*
     |--------------------------------------------------------------------------
     | Login User
