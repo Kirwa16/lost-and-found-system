@@ -108,7 +108,7 @@ class FoundItemController {
         $this->item->brand_model = $_POST['brand_model'] ?? null;
         $this->item->unique_features = $_POST['unique_features'] ?? null;
         $this->item->image = $image['path'];
-        $this->item->status = 'pending';
+        $this->item->status = 'available';
 
         try {
             if($this->item->create()) {
@@ -117,9 +117,11 @@ class FoundItemController {
                 exit;
             }
         } catch (Throwable $e) {
-            $_SESSION['error'] = "Unable to report item.";
-            header("Location: /user/report-found.php");
-            exit;
+            die(
+            "<pre>" .
+            $e->getMessage() .
+            "</pre>"
+            );
         }
 
         $_SESSION['error'] = "Unable to report item.";
@@ -138,7 +140,7 @@ class FoundItemController {
         $this->item->brand_model = $data->brand_model ?? null;
         $this->item->unique_features = $data->unique_features ?? null;
         $this->item->image = $data->image ?? null;
-        $this->item->status = 'pending';
+        $this->item->status = 'available';
     }
 
     private function uploadImage($prefix) {
