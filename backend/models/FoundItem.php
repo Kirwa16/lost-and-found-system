@@ -23,39 +23,70 @@ class FoundItem {
     }
 
     // Create a found item report
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . " 
-                  SET user_id = :user_id, item_name = :item_name, category = :category, 
-                      color = :color, brand_model = :brand_model, unique_features = :unique_features, 
-                      description = :description, location_found = :location_found, date_found = :date_found, 
-                      image = :image, status = :status";
+    public function create()
+{
+    $query = "INSERT INTO " . $this->table_name . "
+        (
+            user_id,
+            item_name,
+            category,
+            color,
+            brand_model,
+            unique_features,
+            description,
+            location_found,
+            date_found,
+            image,
+            status
+        )
+        VALUES
+        (
+            :user_id,
+            :item_name,
+            :category,
+            :color,
+            :brand_model,
+            :unique_features,
+            :description,
+            :location_found,
+            :date_found,
+            :image,
+            :status
+        )";
 
-        $stmt = $this->conn->prepare($query);
+    $stmt = $this->conn->prepare($query);
 
-        // Sanitize inputs
-        $this->item_name = htmlspecialchars(strip_tags($this->item_name));
-        $this->description = htmlspecialchars(strip_tags($this->description));
+    $this->item_name = trim($this->item_name);
+    $this->category = trim($this->category);
+    $this->description = trim($this->description);
+    $this->location_found = trim($this->location_found);
 
-        $stmt->bindParam(":user_id", $this->user_id);
-        $stmt->bindParam(":item_name", $this->item_name);
-        $stmt->bindParam(":category", $this->category);
-        $stmt->bindParam(":color", $this->color);
-        $stmt->bindParam(":brand_model", $this->brand_model);
-        $stmt->bindParam(":unique_features", $this->unique_features);
-        $stmt->bindParam(":description", $this->description);
-        $stmt->bindParam(":location_found", $this->location_found);
-        $stmt->bindParam(":date_found", $this->date_found);
-        $stmt->bindParam(":image", $this->image);
-        
-        // Default status is 'pending' as per your database ENUM
-        $this->status = $this->status ? $this->status : 'pending';
-        $stmt->bindParam(":status", $this->status);
-
-        if($stmt->execute()) {
-            return true;
-        }
-        return false;
+    if (empty($this->status)) {
+        $this->status = 'available';
     }
+
+    $stmt->bindParam(":user_id", $this->user_id, PDO::PARAM_INT);
+    $stmt->bindParam(":item_name", $this->item_name);
+    $stmt->bindParam(":category", $this->category);
+    $stmt->bindParam(":color", $this->color);
+    $stmt->bindParam(":brand_model", $this->brand_model);
+    $stmt->bindParam(":unique_features", $this->unique_features);
+    $stmt->bindParam(":description", $this->description);
+    $stmt->bindParam(":location_found", $this->location_found);
+    $stmt->bindParam(":date_found", $this->date_found);
+    $stmt->bindParam(":image", $this->image);
+    $stmt->bindParam(":status", $this->status);
+
+    try {
+
+        return $stmt->execute();
+
+    } catch (PDOException $e) {
+
+        die("<pre>" . $e->getMessage() . "</pre>");
+
+    }
+}
 
     // Read all found items (Joins with users table to get reporter name)
     public function readAll() {
