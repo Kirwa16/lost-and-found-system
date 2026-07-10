@@ -28,6 +28,7 @@ $item = null;
 $matchId = null;
 $itemId = null;
 $itemType = null;
+$availableLostReports = [];
 
 if(isset($_GET['match_id']) && is_numeric($_GET['match_id']))
 {
@@ -134,6 +135,26 @@ elseif(isset($_GET['item_id'], $_GET['item_type']) && is_numeric($_GET['item_id'
         exit;
     }
 
+    $lostStmt = $conn->prepare(
+        "SELECT id, item_name, category, date_lost
+         FROM lost_items
+         WHERE user_id = :user_id
+         AND status = 'pending'
+         ORDER BY
+            CASE
+                WHEN LOWER(item_name) = LOWER(:item_name)
+                 AND LOWER(category) = LOWER(:category) THEN 0
+                ELSE 1
+            END,
+            created_at DESC"
+    );
+    $lostStmt->execute([
+        ':user_id' => $_SESSION['user_id'],
+        ':item_name' => $item['item_name'],
+        ':category' => $item['category']
+    ]);
+    $availableLostReports = $lostStmt->fetchAll(PDO::FETCH_ASSOC);
+
     $check = $conn->prepare(
         "SELECT id
          FROM claims
@@ -188,6 +209,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST')
     } else {
         $claimData['item_id'] = $itemId;
         $claimData['item_type'] = $itemType;
+        $claimData['lost_item_id'] = $_POST['lost_item_id'] ?? null;
     }
 
     if(!$claimModel->create($claimData)) {
@@ -306,6 +328,28 @@ if($_SERVER['REQUEST_METHOD'] === 'POST')
 
                 <form method="POST">
                     <?= csrf_field() ?>
+
+                    <?php if($claimMode === 'item' && !empty($availableLostReports)): ?>
+                        <div class="form-group">
+                            <label for="lost_item_id">Related lost report (optional)</label>
+                            <select id="lost_item_id" name="lost_item_id">
+                                <option value="">No related lost report</option>
+                                <?php foreach($availableLostReports as $index => $lostReport): ?>
+                                    <option value="<?= (int)$lostReport['id'] ?>"
+                                        <?= $index === 0
+                                            && strcasecmp($lostReport['item_name'], $item['item_name']) === 0
+                                            && strcasecmp($lostReport['category'], $item['category']) === 0
+                                            ? 'selected'
+                                            : '' ?>>
+                                        <?= htmlspecialchars($lostReport['item_name']) ?>
+                                        — <?= htmlspecialchars($lostReport['category']) ?>
+                                        (<?= date('d M Y', strtotime($lostReport['date_lost'])) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small>Select the report this found item resolves. It will be marked claimed after collection.</small>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="form-group">
 

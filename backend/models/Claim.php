@@ -21,6 +21,9 @@ class Claim
             ? (int)$data['item_id']
             : null;
         $itemType = $data['item_type'] ?? null;
+        $lostItemId = isset($data['lost_item_id']) && $data['lost_item_id'] !== ''
+            ? (int)$data['lost_item_id']
+            : null;
 
         if($userId <= 0 || $message === '') {
             return false;
@@ -34,9 +37,31 @@ class Claim
             return false;
         }
 
+        if($matchId !== null && $lostItemId !== null) {
+            return false;
+        }
+
+        if($lostItemId !== null) {
+            $stmt = $this->conn->prepare(
+                "SELECT id
+                 FROM lost_items
+                 WHERE id = :lost_item_id
+                 AND user_id = :user_id
+                 AND status = 'pending'"
+            );
+            $stmt->execute([
+                ':lost_item_id' => $lostItemId,
+                ':user_id' => $userId
+            ]);
+
+            if(!$stmt->fetchColumn()) {
+                return false;
+            }
+        }
+
         $sql = "INSERT INTO {$this->table}
-                (user_id, match_id, item_id, item_type, claim_message, status)
-                VALUES (:user_id, :match_id, :item_id, :item_type, :message, 'pending')";
+                (user_id, match_id, item_id, item_type, lost_item_id, claim_message, status)
+                VALUES (:user_id, :match_id, :item_id, :item_type, :lost_item_id, :message, 'pending')";
 
         $stmt = $this->conn->prepare($sql);
 
@@ -45,6 +70,7 @@ class Claim
             ':match_id' => $matchId,
             ':item_id' => $itemId,
             ':item_type' => $itemType,
+            ':lost_item_id' => $lostItemId,
             ':message' => $message
         ]);
     }
@@ -58,6 +84,7 @@ class Claim
                 c.match_id,
                 c.item_id,
                 c.item_type,
+                c.lost_item_id AS direct_lost_item_id,
                 c.claim_message,
                 c.status,
                 c.created_at,
@@ -115,16 +142,7 @@ class Claim
 
             LEFT JOIN lost_items direct_lost
                 ON c.match_id IS NULL
-                AND direct_lost.id = (
-                    SELECT dl.id
-                    FROM lost_items dl
-                    WHERE dl.user_id = c.user_id
-                    AND direct_found.id IS NOT NULL
-                    AND LOWER(dl.item_name) = LOWER(direct_found.item_name)
-                    AND LOWER(dl.category) = LOWER(direct_found.category)
-                    ORDER BY dl.created_at DESC
-                    LIMIT 1
-                )
+                AND c.lost_item_id = direct_lost.id
 
             {$where}
         ";
@@ -254,7 +272,7 @@ class Claim
         */
 
         $stmt = $this->conn->prepare(
-            "SELECT user_id, match_id, item_id, item_type, status
+            "SELECT user_id, match_id, item_id, item_type, lost_item_id, status
              FROM claims
              WHERE id = :id"
         );
@@ -295,6 +313,19 @@ class Claim
 
                 $stmt->execute([
                     ':item_id' => $claim['item_id']
+                ]);
+            }
+
+            if (!empty($claim['lost_item_id'])) {
+                $stmt = $this->conn->prepare(
+                    "UPDATE lost_items
+                     SET status = 'matched'
+                     WHERE id = :lost_item_id
+                     AND user_id = :user_id"
+                );
+                $stmt->execute([
+                    ':lost_item_id' => $claim['lost_item_id'],
+                    ':user_id' => $claim['user_id']
                 ]);
             }
 
@@ -429,7 +460,7 @@ class Claim
         $this->conn->beginTransaction();
 
         $stmt = $this->conn->prepare(
-            "SELECT user_id, match_id, item_id, item_type, status
+            "SELECT user_id, match_id, item_id, item_type, lost_item_id, status
              FROM claims
              WHERE id = :id"
         );
@@ -500,6 +531,19 @@ class Claim
             $stmt->execute([
                 ':item_id' => $claim['item_id']
             ]);
+
+            if (!empty($claim['lost_item_id'])) {
+                $stmt = $this->conn->prepare(
+                    "UPDATE lost_items
+                     SET status = 'claimed'
+                     WHERE id = :lost_item_id
+                     AND user_id = :user_id"
+                );
+                $stmt->execute([
+                    ':lost_item_id' => $claim['lost_item_id'],
+                    ':user_id' => $claim['user_id']
+                ]);
+            }
         }
 
         $summary = $this->getClaimSummary($id);
@@ -531,7 +575,7 @@ class Claim
 	        $this->conn->beginTransaction();
 
 	        $stmt = $this->conn->prepare(
-	            "SELECT user_id, match_id, item_id, item_type, status
+	            "SELECT user_id, match_id, item_id, item_type, lost_item_id, status
 	             FROM claims
 	             WHERE id = :id"
 	        );
@@ -601,6 +645,19 @@ class Claim
 	                $stmt->execute([
 	                    ':item_id' => $claim['item_id']
 	                ]);
+
+	                if (!empty($claim['lost_item_id'])) {
+	                    $stmt = $this->conn->prepare(
+	                        "UPDATE lost_items
+	                         SET status = 'pending'
+	                         WHERE id = :lost_item_id
+	                         AND user_id = :user_id"
+	                    );
+	                    $stmt->execute([
+	                        ':lost_item_id' => $claim['lost_item_id'],
+	                        ':user_id' => $claim['user_id']
+	                    ]);
+	                }
 	            }
 	        }
 

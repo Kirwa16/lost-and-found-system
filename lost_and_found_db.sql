@@ -145,6 +145,8 @@ CREATE TABLE claims
 
     item_type VARCHAR(20) NULL,
 
+    lost_item_id INT NULL,
+
     claim_message TEXT NOT NULL,
 
     status ENUM(
@@ -164,7 +166,12 @@ CREATE TABLE claims
     CONSTRAINT fk_claim_match
         FOREIGN KEY(match_id)
         REFERENCES matches(id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_claim_lost_item
+        FOREIGN KEY(lost_item_id)
+        REFERENCES lost_items(id)
+        ON DELETE SET NULL
 );
 
 

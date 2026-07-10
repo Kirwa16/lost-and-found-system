@@ -30,6 +30,7 @@ if(!in_array($_SESSION['role'], ['student', 'staff'], true))
 <title>Report Lost Item</title>
 
 <link rel="stylesheet" href="/assets/css/dashboard.css">
+<link rel="stylesheet" href="/assets/css/forms.css">
 <link rel="stylesheet" href="/assets/css/admin.css">
 <link rel="stylesheet" href="/assets/css/sidebar.css">
 <link rel="stylesheet" href="/assets/css/topbar.css">
@@ -49,6 +50,18 @@ if(!in_array($_SESSION['role'], ['student', 'staff'], true))
         <div class="content">
 
             <h1>Report Lost Item</h1>
+
+            <?php if(isset($_SESSION['success'])): ?>
+
+                <div class="success">
+
+                    <?= htmlspecialchars($_SESSION['success']) ?>
+
+                </div>
+
+                <?php unset($_SESSION['success']); ?>
+
+            <?php endif; ?>
 
             <?php if(isset($_SESSION['error'])): ?>
 

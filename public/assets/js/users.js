@@ -6,22 +6,35 @@ const searchInput = document.getElementById("userSearchInput");
 const searchMeta = document.getElementById("userSearchMeta");
 const noUsersRow = document.getElementById("noUsersRow");
 const userRows = Array.from(document.querySelectorAll(".user-row"));
+const idInput = document.getElementById("id");
+const fullnameInput = document.getElementById("fullname");
+const emailInput = document.getElementById("email");
+const roleInput = document.getElementById("role");
 
 function bindEditButtons() {
     document.querySelectorAll(".editUser").forEach(btn => {
         btn.onclick = e => {
             e.preventDefault();
-            id.value = btn.dataset.id;
-            fullname.value = btn.dataset.fullname;
-            email.value = btn.dataset.email;
-            role.value = btn.dataset.role;
-            role.disabled = btn.dataset.id === currentUserId;
+
+            if(!modal || !idInput || !fullnameInput || !emailInput || !roleInput) {
+                return;
+            }
+
+            idInput.value = btn.dataset.id;
+            fullnameInput.value = btn.dataset.fullname;
+            emailInput.value = btn.dataset.email;
+            roleInput.value = btn.dataset.role;
+            roleInput.disabled = btn.dataset.id === currentUserId;
             modal.classList.add("show");
         };
     });
 }
 
 function closeModal() {
+    if(!modal) {
+        return;
+    }
+
     modal.classList.remove("show");
 }
 
@@ -66,7 +79,7 @@ if(searchInput) {
 bindEditButtons();
 
 window.onclick = e => {
-    if(e.target === modal) {
+    if(modal && e.target === modal) {
         closeModal();
     }
 };

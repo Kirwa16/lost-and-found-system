@@ -128,6 +128,7 @@ class LostItemController {
                 exit;
             }
         } catch (Throwable $e) {
+            error_log('Lost item report failed: ' . $e->getMessage());
             $_SESSION['error'] = "Unable to report item.";
             header("Location: /user/report-lost.php");
             exit;

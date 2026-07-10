@@ -28,6 +28,47 @@ $db = new Database();
 $conn = $db->getConnection();
 $userModel = new User($conn);
 
+$currentAdminId = (int) $_SESSION['user_id'];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
+    if (!csrf_validate($_POST['csrf_token'] ?? null)) {
+        $_SESSION['error'] = 'Security token expired. Please try again.';
+        header('Location: users.php');
+        exit;
+    }
+
+    $id = (int) ($_POST['id'] ?? 0);
+    $fullname = trim($_POST['fullname'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $role = trim($_POST['role'] ?? '');
+
+    $existingUser = $id > 0 ? $userModel->getUserById($id) : null;
+
+    if (!$existingUser) {
+        $_SESSION['error'] = 'User not found.';
+    } elseif ($fullname === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['error'] = 'Please provide a valid name and email address.';
+    } else {
+        if ($id === $currentAdminId) {
+            $role = $existingUser['role'];
+        }
+
+        if ($userModel->updateUser($id, $fullname, $email, $role)) {
+            $_SESSION['success'] = 'User updated successfully.';
+        } else {
+            $_SESSION['error'] = 'Unable to update user. The email may already be in use.';
+        }
+    }
+
+    $redirect = 'users.php';
+    if (trim($_GET['search'] ?? '') !== '') {
+        $redirect .= '?search=' . urlencode(trim($_GET['search']));
+    }
+
+    header("Location: {$redirect}");
+    exit;
+}
+
 $search = trim($_GET['search'] ?? '');
 
 $users = $search !== ''
@@ -35,8 +76,6 @@ $users = $search !== ''
     : $userModel->getAllUsers();
 
 $totalUsers = count($users);
-
-/* Keep your existing update/delete handlers here */
 
 ?><!DOCTYPE html>
 <html lang="en">
@@ -67,6 +106,20 @@ $totalUsers = count($users);
 
 <h1>Manage Users</h1>
 
+<?php if(isset($_SESSION['success'])): ?>
+<div class="success">
+<?= htmlspecialchars($_SESSION['success']) ?>
+</div>
+<?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
+<?php if(isset($_SESSION['error'])): ?>
+<div class="error">
+<?= htmlspecialchars($_SESSION['error']) ?>
+</div>
+<?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
 <div class="cards users-summary">
 <div class="card">
 <h3>Total Users</h3>
@@ -76,7 +129,7 @@ $totalUsers = count($users);
 
 <div class="toolbar">
 
-<form class="search-form" method="GET">
+<form class="search-form" id="userSearchForm" method="GET">
 
 <div class="search-box">
 
@@ -84,6 +137,7 @@ $totalUsers = count($users);
 
 <input
 type="text"
+id="userSearchInput"
 name="search"
 placeholder="Search by name, email or role..."
 value="<?= htmlspecialchars($search) ?>">
@@ -103,14 +157,14 @@ Search
 
 </form>
 
-<div class="search-meta">
+<div class="search-meta" id="userSearchMeta">
 <i class="fas fa-users"></i>
 <strong><?= $totalUsers ?></strong> Users
 </div>
 
 </div>
 
-<div class="table-card">
+<div class="table-card" data-current-user-id="<?= $currentAdminId ?>">
 
 <table class="table">
 
@@ -129,9 +183,10 @@ Search
 
 <?php foreach($users as $i=>$user): ?>
 
-<tr>
+<tr class="user-row"
+data-search="<?= htmlspecialchars(strtolower($user['fullname'].' '.$user['email'].' '.$user['role']), ENT_QUOTES) ?>">
 
-<td><?= $i+1 ?></td>
+<td class="user-row-number"><?= $i+1 ?></td>
 <td><?= htmlspecialchars($user['fullname']) ?></td>
 <td><?= htmlspecialchars($user['email']) ?></td>
 
@@ -148,11 +203,12 @@ Search
 <div class="table-actions">
 
 <a href="#"
-class="action-btn editUser"
+class="action-btn edit-btn editUser"
 data-id="<?= $user['id'] ?>"
-data-fullname="<?= htmlspecialchars($user['fullname']) ?>"
-data-email="<?= htmlspecialchars($user['email']) ?>"
-data-role="<?= $user['role'] ?>">
+data-fullname="<?= htmlspecialchars($user['fullname'], ENT_QUOTES) ?>"
+data-email="<?= htmlspecialchars($user['email'], ENT_QUOTES) ?>"
+data-role="<?= htmlspecialchars($user['role'], ENT_QUOTES) ?>"
+title="Edit user">
 <i class="fas fa-edit"></i>
 </a>
 
@@ -164,6 +220,16 @@ data-role="<?= $user['role'] ?>">
 
 <?php endforeach; ?>
 
+<?php if(!$users): ?>
+<tr id="noUsersRow">
+<td colspan="6">No users found.</td>
+</tr>
+<?php else: ?>
+<tr id="noUsersRow" style="display:none;">
+<td colspan="6">No users found.</td>
+</tr>
+<?php endif; ?>
+
 </tbody>
 
 </table>
@@ -174,6 +240,48 @@ data-role="<?= $user['role'] ?>">
 
 </div>
 
+</div>
+
+<div class="modal" id="editModal">
+<div class="modal-content">
+
+<h2>Edit User</h2>
+
+<form method="POST">
+<?= csrf_field() ?>
+
+<input type="hidden" name="id" id="id">
+
+<div class="form-group">
+<label for="fullname">Full Name</label>
+<input type="text" name="fullname" id="fullname" required>
+</div>
+
+<div class="form-group">
+<label for="email">Email</label>
+<input type="email" name="email" id="email" required>
+</div>
+
+<div class="form-group">
+<label for="role">Role</label>
+<select name="role" id="role" required>
+<option value="student">Student</option>
+<option value="staff">Staff</option>
+<option value="admin">Admin</option>
+</select>
+</div>
+
+<div class="modal-buttons">
+<button type="button" class="search-btn" onclick="closeModal()">Cancel</button>
+<button type="submit" name="update_user" class="search-btn">
+<i class="fas fa-save"></i>
+Save
+</button>
+</div>
+
+</form>
+
+</div>
 </div>
 
 <script src="/assets/js/sidebar.js"></script>

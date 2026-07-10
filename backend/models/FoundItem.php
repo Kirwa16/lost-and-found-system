@@ -62,7 +62,7 @@ class FoundItem {
     $this->location_found = trim($this->location_found);
 
     if (empty($this->status)) {
-        $this->status = 'available';
+        $this->status = 'pending';
     }
 
     $stmt->bindParam(":user_id", $this->user_id, PDO::PARAM_INT);
@@ -77,15 +77,7 @@ class FoundItem {
     $stmt->bindParam(":image", $this->image);
     $stmt->bindParam(":status", $this->status);
 
-    try {
-
-        return $stmt->execute();
-
-    } catch (PDOException $e) {
-
-        die("<pre>" . $e->getMessage() . "</pre>");
-
-    }
+    return $stmt->execute();
 }
 
     // Read all found items (Joins with users table to get reporter name)

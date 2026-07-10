@@ -137,7 +137,7 @@ class ItemMatch
         $stmt = $this->conn->prepare(
             "SELECT id, item_name, category, location_lost, date_lost
              FROM lost_items
-             WHERE status = 'available'
+             WHERE status = 'pending'
              ORDER BY created_at DESC"
         );
         $stmt->execute();
@@ -150,7 +150,7 @@ class ItemMatch
         $stmt = $this->conn->prepare(
             "SELECT id, item_name, category, location_found, date_found
              FROM found_items
-             WHERE status = 'available'
+             WHERE status = 'pending'
              ORDER BY created_at DESC"
         );
         $stmt->execute();
@@ -301,14 +301,14 @@ class ItemMatch
 
             $stmt = $this->conn->prepare(
                 "UPDATE lost_items
-                 SET status = 'available'
+                 SET status = 'pending'
                  WHERE id = :id"
             );
             $stmt->execute([':id' => $match['lost_item_id']]);
 
             $stmt = $this->conn->prepare(
                 "UPDATE found_items
-                 SET status = 'available'
+                 SET status = 'pending'
                  WHERE id = :id"
             );
             $stmt->execute([':id' => $match['found_item_id']]);
@@ -342,14 +342,14 @@ class ItemMatch
             if($match['status'] !== 'collected') {
                 $stmt = $this->conn->prepare(
                     "UPDATE lost_items
-                     SET status = 'available'
+                     SET status = 'pending'
                      WHERE id = :id"
                 );
                 $stmt->execute([':id' => $match['lost_item_id']]);
 
                 $stmt = $this->conn->prepare(
                     "UPDATE found_items
-                     SET status = 'available'
+                     SET status = 'pending'
                      WHERE id = :id"
                 );
                 $stmt->execute([':id' => $match['found_item_id']]);
@@ -368,7 +368,7 @@ class ItemMatch
     public function countPendingMatches(): int
     {
         $stmt = $this->conn->prepare(
-            "SELECT COUNT(*) FROM matches WHERE status='available'"
+            "SELECT COUNT(*) FROM matches WHERE status='pending'"
         );
         $stmt->execute();
 

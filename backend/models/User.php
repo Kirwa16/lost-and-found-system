@@ -375,6 +375,7 @@ class User
                   FROM {$this->table_name}
                   WHERE fullname LIKE :keyword
                      OR email LIKE :keyword
+                     OR role LIKE :keyword
                   ORDER BY fullname ASC";
 
         $stmt = $this->conn->prepare($query);
